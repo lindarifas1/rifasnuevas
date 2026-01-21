@@ -20,7 +20,7 @@ export const NumberGrid = ({
   onSelectNumber,
   onClearSelection,
 }: NumberGridProps) => {
-  const [randomCount, setRandomCount] = useState(1);
+  const [randomCount, setRandomCount] = useState<string>('1');
 
   const occupiedNumbers = useMemo(() => {
     return new Set(
@@ -48,16 +48,26 @@ export const NumberGrid = ({
   };
 
   const handleRandomSelection = () => {
+    const count = parseInt(randomCount) || 0;
+    if (count <= 0) return;
+
+    // Clear previous selection first, then select new random numbers
+    onClearSelection();
+    
     const availableNumbers: number[] = [];
     for (let i = 0; i < numberCount; i++) {
-      if (!occupiedNumbers.has(i) && !selectedNumbers.includes(i)) {
+      if (!occupiedNumbers.has(i)) {
         availableNumbers.push(i);
       }
     }
 
-    const count = Math.min(randomCount, availableNumbers.length);
+    const actualCount = Math.min(count, availableNumbers.length);
     const shuffled = availableNumbers.sort(() => Math.random() - 0.5);
-    shuffled.slice(0, count).forEach(num => onSelectNumber(num));
+    
+    // Use setTimeout to ensure state is cleared before adding new numbers
+    setTimeout(() => {
+      shuffled.slice(0, actualCount).forEach(num => onSelectNumber(num));
+    }, 0);
   };
 
   const statusColors = {
@@ -78,8 +88,9 @@ export const NumberGrid = ({
           min={1}
           max={numberCount - occupiedNumbers.size}
           value={randomCount}
-          onChange={(e) => setRandomCount(Math.max(1, parseInt(e.target.value) || 1))}
+          onChange={(e) => setRandomCount(e.target.value)}
           className="w-20 h-9"
+          placeholder="1"
         />
         <Button size="sm" variant="secondary" onClick={handleRandomSelection}>
           Generar
