@@ -199,35 +199,63 @@ export const VerifyNumbersGlobal = () => {
         ? totalPending 
         : paymentData.partialAmount;
 
-      // Distribute payment across tickets proportionally
-      let remainingPayment = paymentAmount;
-      
-      for (const ticket of selectedTicketsForPayment) {
-        const raffle = raffles.find(r => r.id === ticket.raffle_id);
-        const ticketPrice = raffle?.price || 0;
-        const currentPaid = ticket.amount_paid || 0;
-        const ticketOwed = ticketPrice - currentPaid;
-        
-        const paymentForThisTicket = Math.min(remainingPayment, ticketOwed);
-        remainingPayment -= paymentForThisTicket;
-        
-        const newAmountPaid = currentPaid + paymentForThisTicket;
-        const newStatus = newAmountPaid >= ticketPrice ? 'pending' : ticket.payment_status;
+      // Collect all ticket IDs that should be updated
+      const ticketIds = selectedTicketsForPayment.map(t => t.id);
 
-        const updateData: Record<string, unknown> = {
-          amount_paid: newAmountPaid,
-          payment_status: newStatus,
-          reference_number: paymentData.referenceNumber,
-        };
+      if (paymentData.paymentType === 'full') {
+        // For full payment, update ALL tickets at once to their full price
+        for (const ticket of selectedTicketsForPayment) {
+          const raffle = raffles.find(r => r.id === ticket.raffle_id);
+          const ticketPrice = raffle?.price || 0;
 
-        if (paymentProofUrl) {
-          updateData.payment_proof_url = paymentProofUrl;
+          const updateData: Record<string, unknown> = {
+            amount_paid: ticketPrice,
+            payment_status: 'pending',
+            reference_number: paymentData.referenceNumber,
+          };
+
+          if (paymentProofUrl) {
+            updateData.payment_proof_url = paymentProofUrl;
+          }
+
+          await supabase
+            .from('tickets')
+            .update(updateData)
+            .eq('id', ticket.id);
         }
+      } else {
+        // For partial payment, distribute proportionally
+        let remainingPayment = paymentAmount;
+        
+        for (const ticket of selectedTicketsForPayment) {
+          if (remainingPayment <= 0) break;
+          
+          const raffle = raffles.find(r => r.id === ticket.raffle_id);
+          const ticketPrice = raffle?.price || 0;
+          const currentPaid = ticket.amount_paid || 0;
+          const ticketOwed = ticketPrice - currentPaid;
+          
+          const paymentForThisTicket = Math.min(remainingPayment, ticketOwed);
+          remainingPayment -= paymentForThisTicket;
+          
+          const newAmountPaid = currentPaid + paymentForThisTicket;
+          const newStatus = newAmountPaid >= ticketPrice ? 'pending' : ticket.payment_status;
 
-        await supabase
-          .from('tickets')
-          .update(updateData)
-          .eq('id', ticket.id);
+          const updateData: Record<string, unknown> = {
+            amount_paid: newAmountPaid,
+            payment_status: newStatus,
+            reference_number: paymentData.referenceNumber,
+          };
+
+          if (paymentProofUrl) {
+            updateData.payment_proof_url = paymentProofUrl;
+          }
+
+          await supabase
+            .from('tickets')
+            .update(updateData)
+            .eq('id', ticket.id);
+        }
       }
 
       toast.success('¡Pago registrado exitosamente! El administrador verificará tu pago.');
