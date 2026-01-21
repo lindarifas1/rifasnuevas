@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2, Upload, CreditCard, Wallet } from 'lucide-react';
 import { Raffle } from '@/types/database';
+import { PurchaseTicket } from './PurchaseTicket';
 
 interface PurchaseFormProps {
   raffle: Raffle;
@@ -23,6 +24,7 @@ export const PurchaseForm = ({
   onCancel,
 }: PurchaseFormProps) => {
   const [loading, setLoading] = useState(false);
+  const [showTicket, setShowTicket] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     cedula: '',
@@ -113,7 +115,7 @@ export const PurchaseForm = ({
       }
 
       toast.success('¡Números reservados exitosamente!');
-      onSuccess();
+      setShowTicket(true);
     } catch (error) {
       console.error('Error:', error);
       toast.error('Error al procesar la compra. Intente nuevamente.');
@@ -122,12 +124,39 @@ export const PurchaseForm = ({
     }
   };
 
+  const handleCloseTicket = () => {
+    setShowTicket(false);
+    onSuccess();
+  };
+
+  const getAmountPaid = () => {
+    if (formData.paymentType === 'reserve') return 0;
+    if (formData.paymentType === 'partial') return formData.partialAmount;
+    return totalPrice;
+  };
+
   const formatNumber = (num: number) => {
     if (raffle.number_count <= 100) {
       return num.toString().padStart(2, '0');
     }
     return num.toString().padStart(3, '0');
   };
+
+  if (showTicket) {
+    return (
+      <PurchaseTicket
+        raffle={raffle}
+        selectedNumbers={selectedNumbers}
+        buyerName={formData.name}
+        buyerCedula={formData.cedula}
+        buyerPhone={formData.phone}
+        referenceNumber={formData.referenceNumber}
+        paymentType={formData.paymentType}
+        amountPaid={getAmountPaid()}
+        onClose={handleCloseTicket}
+      />
+    );
+  }
 
   return (
     <Card className="w-full max-w-lg mx-auto">

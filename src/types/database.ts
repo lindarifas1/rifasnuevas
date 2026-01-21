@@ -27,5 +27,6 @@ export interface Ticket {
 export interface SiteSettings {
   id: string;
   cover_image: string;
+  admin_whatsapp: string;
   updated_at: string;
 }
