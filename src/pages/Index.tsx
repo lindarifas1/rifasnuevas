@@ -5,8 +5,9 @@ import { PaymentMethodsDisplay } from '@/components/PaymentMethodsDisplay';
 import { VerifyNumbersGlobal } from '@/components/VerifyNumbersGlobal';
 import { supabase } from '@/integrations/supabase/client';
 import { Raffle, Ticket } from '@/types/database';
-import { Loader2, Trophy } from 'lucide-react';
+import { Loader2, Trophy, MessageCircle } from 'lucide-react';
 import heroBanner from '@/assets/hero-banner.jpg';
+import { Button } from '@/components/ui/button';
 
 const Index = () => {
   const [raffles, setRaffles] = useState<Raffle[]>([]);
@@ -14,6 +15,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [coverImage, setCoverImage] = useState<string>(heroBanner);
   const [appName, setAppName] = useState('RifaMax');
+  const [adminWhatsapp, setAdminWhatsapp] = useState('');
   const isAdmin = localStorage.getItem('isAdmin') === 'true';
 
   useEffect(() => {
@@ -69,6 +71,7 @@ const Index = () => {
       if (data) {
         setCoverImage(data.cover_image || heroBanner);
         setAppName(data.app_name || 'RifaMax');
+        setAdminWhatsapp(data.admin_whatsapp || '');
       }
     } catch (error) {
       console.error('Error fetching site settings:', error);
@@ -77,7 +80,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header isAdmin={isAdmin} appName={appName} />
+      <Header isAdmin={isAdmin} appName={appName} adminWhatsapp={adminWhatsapp} />
       
       {/* Hero Section - Full image without cropping */}
       <section className="bg-black">
@@ -124,6 +127,27 @@ const Index = () => {
 
       {/* Verify Numbers Section */}
       <VerifyNumbersGlobal />
+
+      {/* WhatsApp Contact Section */}
+      {adminWhatsapp && (
+        <section className="container py-8">
+          <div className="bg-card rounded-xl p-6 text-center border shadow-card">
+            <h3 className="text-lg font-bold mb-2">¿Tienes dudas?</h3>
+            <p className="text-muted-foreground mb-4">Contáctanos por WhatsApp</p>
+            <Button 
+              size="lg"
+              onClick={() => {
+                const cleanPhone = adminWhatsapp.replace(/[^0-9]/g, '');
+                window.open(`https://wa.me/${cleanPhone}`, '_blank');
+              }}
+              className="bg-[#25D366] hover:bg-[#128C7E] text-white gap-2"
+            >
+              <MessageCircle className="w-5 h-5" />
+              Escribir por WhatsApp
+            </Button>
+          </div>
+        </section>
+      )}
 
       {/* Payment Methods */}
       <PaymentMethodsDisplay />

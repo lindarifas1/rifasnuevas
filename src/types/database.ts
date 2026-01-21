@@ -6,6 +6,7 @@ export interface Raffle {
   price: number;
   raffle_date: string;
   number_count: number; // 100 or 1000
+  max_numbers_per_client: number | null; // Limit per cedula, null = unlimited
   status: 'active' | 'finished';
   created_at: string;
 }
