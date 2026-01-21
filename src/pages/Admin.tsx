@@ -17,6 +17,7 @@ import { es } from 'date-fns/locale';
 import { WhatsAppMessageMenu } from '@/components/WhatsAppMessageMenu';
 import { AdminOrderTicket } from '@/components/AdminOrderTicket';
 import { DeleteRaffleDialog } from '@/components/DeleteRaffleDialog';
+import { PaymentMethodsManager } from '@/components/PaymentMethodsManager';
 import {
   Plus,
   Trash2,
@@ -729,7 +730,7 @@ const Admin = () => {
                       value={termsConditions}
                       onChange={(e) => setTermsConditions(e.target.value)}
                       placeholder="Escribe los términos y condiciones..."
-                      rows={6}
+                      rows={4}
                     />
                     <p className="text-xs text-muted-foreground">
                       Este texto se mostrará a los usuarios antes de participar en una rifa
@@ -738,6 +739,10 @@ const Admin = () => {
                   <Button onClick={handleUpdateAppSettings} className="w-full">
                     Guardar Configuración
                   </Button>
+                  
+                  <div className="border-t pt-4">
+                    <PaymentMethodsManager />
+                  </div>
                 </div>
               </DialogContent>
             </Dialog>

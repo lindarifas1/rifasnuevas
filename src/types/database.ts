@@ -49,3 +49,13 @@ export interface SiteSettings {
   terms_conditions: string;
   updated_at: string;
 }
+
+export interface PaymentMethod {
+  id: string;
+  name: string;
+  image_url: string | null;
+  details: string;
+  is_active: boolean;
+  display_order: number;
+  created_at: string;
+}

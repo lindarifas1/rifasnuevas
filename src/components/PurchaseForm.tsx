@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Loader2, Upload, CreditCard, Wallet } from 'lucide-react';
 import { Raffle } from '@/types/database';
 import { PurchaseTicket } from './PurchaseTicket';
+import { PaymentMethodsDisplay } from './PaymentMethodsDisplay';
 
 interface PurchaseFormProps {
   raffle: Raffle;
@@ -173,6 +174,9 @@ export const PurchaseForm = ({
         </p>
       </CardHeader>
       <CardContent className="p-4 space-y-4">
+        {/* Payment Methods */}
+        <PaymentMethodsDisplay compact />
+
         {/* Selected Numbers */}
         <div className="flex flex-wrap gap-1.5 p-3 bg-muted rounded-lg">
           {selectedNumbers.map(num => (
