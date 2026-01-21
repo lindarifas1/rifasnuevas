@@ -53,6 +53,8 @@ const Admin = () => {
   const [orderFilter, setOrderFilter] = useState<'all' | 'paid' | 'pending' | 'rejected'>('all');
   const [addClientDialogOpen, setAddClientDialogOpen] = useState(false);
   const [addingClient, setAddingClient] = useState(false);
+  const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
+  const [approvedOrder, setApprovedOrder] = useState<GroupedOrder | null>(null);
   const [newClient, setNewClient] = useState({
     name: '',
     cedula: '',
@@ -197,7 +199,7 @@ const Admin = () => {
     }
   };
 
-  const handleUpdateOrderStatus = async (ticketIds: string[], status: 'paid' | 'rejected' | 'pending') => {
+  const handleUpdateOrderStatus = async (ticketIds: string[], status: 'paid' | 'rejected' | 'pending', order?: GroupedOrder) => {
     try {
       const { error } = await supabase
         .from('tickets')
@@ -208,6 +210,12 @@ const Admin = () => {
 
       toast.success('Estado actualizado');
       if (selectedRaffle) fetchTickets(selectedRaffle);
+      
+      // If approving, show the approval dialog with WhatsApp option
+      if (status === 'paid' && order) {
+        setApprovedOrder(order);
+        setApprovalDialogOpen(true);
+      }
     } catch (error) {
       console.error('Error:', error);
       toast.error('Error al actualizar');
@@ -408,6 +416,21 @@ const Admin = () => {
       return num.toString().padStart(2, '0');
     }
     return num.toString().padStart(3, '0');
+  };
+
+  const getWhatsAppConfirmationMessage = (order: GroupedOrder) => {
+    const formattedNumbers = order.numbers
+      .sort((a, b) => a - b)
+      .map(n => formatNumber(n, selectedRaffleData?.number_count || 100))
+      .join(', ');
+    
+    return `¡Hola ${order.buyer_name}! 🎉\n\nTu pago ha sido *CONFIRMADO* para la rifa "${selectedRaffleData?.title || 'la rifa'}".\n\n📌 Números: ${formattedNumbers}\n💰 Monto: $${order.total_amount.toFixed(2)}\n\n¡Buena suerte! 🍀`;
+  };
+
+  const openWhatsAppWithMessage = (phone: string, message: string) => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    const encodedMessage = encodeURIComponent(message);
+    window.open(`https://wa.me/${cleanPhone}?text=${encodedMessage}`, '_blank');
   };
 
   const selectedRaffleData = raffles.find(r => r.id === selectedRaffle);
@@ -1004,7 +1027,7 @@ const Admin = () => {
                             size="sm"
                             variant="outline"
                             className="text-success border-success hover:bg-success hover:text-success-foreground"
-                            onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'paid')}
+                            onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'paid', order)}
                             disabled={order.payment_status === 'paid'}
                           >
                             <CheckCircle className="w-4 h-4 mr-2" />
@@ -1069,6 +1092,70 @@ const Admin = () => {
                 <p className="text-center text-muted-foreground">No hay comprobante disponible</p>
               )}
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Approval Confirmation Dialog */}
+        <Dialog open={approvalDialogOpen} onOpenChange={setApprovalDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-success">
+                <CheckCircle className="w-6 h-6" />
+                ¡Pago Aprobado!
+              </DialogTitle>
+            </DialogHeader>
+            {approvedOrder && (
+              <div className="space-y-4 pt-2">
+                <div className="bg-success/10 rounded-lg p-4 text-center">
+                  <p className="text-lg font-semibold text-success mb-1">
+                    Pedido aprobado exitosamente
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Cliente: {approvedOrder.buyer_name}
+                  </p>
+                  <div className="flex flex-wrap justify-center gap-1 mt-2">
+                    {approvedOrder.numbers.sort((a, b) => a - b).map(num => (
+                      <span 
+                        key={num}
+                        className="px-2 py-0.5 bg-primary text-primary-foreground rounded-full text-xs font-bold"
+                      >
+                        {formatNumber(num, selectedRaffleData?.number_count || 100)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground text-center">
+                    ¿Deseas notificar al cliente por WhatsApp?
+                  </p>
+                  <Button
+                    className="w-full bg-success hover:bg-success/90 text-success-foreground"
+                    onClick={() => {
+                      openWhatsAppWithMessage(
+                        approvedOrder.buyer_phone,
+                        getWhatsAppConfirmationMessage(approvedOrder)
+                      );
+                      setApprovalDialogOpen(false);
+                      setApprovedOrder(null);
+                    }}
+                  >
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Enviar confirmación por WhatsApp
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setApprovalDialogOpen(false);
+                      setApprovedOrder(null);
+                    }}
+                  >
+                    Cerrar
+                  </Button>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
 
