@@ -38,6 +38,7 @@ import {
   Search,
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { User, Session } from '@supabase/supabase-js';
 
 interface ApprovalHistoryItem {
   order_id: string;
@@ -52,6 +53,10 @@ interface ApprovalHistoryItem {
 
 const Admin = () => {
   const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
   const [raffles, setRaffles] = useState<Raffle[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [allTickets, setAllTickets] = useState<Ticket[]>([]);
@@ -91,17 +96,73 @@ const Admin = () => {
     status: 'active' as const,
   });
 
+  // Auth check
   useEffect(() => {
-    const isAdmin = localStorage.getItem('isAdmin') === 'true';
-    if (!isAdmin) {
-      navigate('/');
-      return;
-    }
-    fetchRaffles();
-    fetchAllTickets();
-    fetchSiteSettings();
-    loadApprovalHistory();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          setTimeout(() => {
+            checkAdminRole(session.user.id);
+          }, 0);
+        } else {
+          setIsAdmin(false);
+          setAuthLoading(false);
+        }
+      }
+    );
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        checkAdminRole(session.user.id);
+      } else {
+        setAuthLoading(false);
+        navigate('/admin/login');
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [navigate]);
+
+  const checkAdminRole = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .single();
+
+      if (error || !data) {
+        setIsAdmin(false);
+        toast.error('No tienes permisos de administrador');
+        await supabase.auth.signOut();
+        navigate('/admin/login');
+      } else {
+        setIsAdmin(true);
+        fetchRaffles();
+        fetchAllTickets();
+        fetchSiteSettings();
+        loadApprovalHistory();
+      }
+    } catch (error) {
+      setIsAdmin(false);
+      navigate('/admin/login');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    toast.success('Sesión cerrada');
+    navigate('/');
+  };
 
   const loadApprovalHistory = () => {
     try {
@@ -557,10 +618,24 @@ const Admin = () => {
     return nameMatch || cedulaMatch || phoneMatch || numberMatch;
   });
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return null;
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header isAdmin />
+        <Header isAdmin onLogout={handleLogout} />
         <div className="flex items-center justify-center h-[60vh]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
@@ -570,7 +645,7 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header isAdmin />
+      <Header isAdmin onLogout={handleLogout} />
 
       <div className="container py-4 px-3 sm:py-6 sm:px-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
