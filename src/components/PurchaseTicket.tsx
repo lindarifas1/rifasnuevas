@@ -211,6 +211,11 @@ ${referenceNumber ? `🔢 Referencia: ${referenceNumber}` : ''}
             <p className="text-center text-xs text-muted-foreground">
               {format(new Date(), "dd/MM/yyyy - HH:mm:ss")}
             </p>
+
+            {/* WhatsApp instruction */}
+            <p className="text-center font-bold text-primary text-sm mt-2">
+              Descarga el ticket y presiona WhatsApp
+            </p>
           </CardContent>
         </div>
 

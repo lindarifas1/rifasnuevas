@@ -101,6 +101,11 @@ export const RaffleCard = ({ raffle, soldCount = 0 }: RaffleCardProps) => {
               />
             </div>
           </div>
+
+          {/* Instruction text */}
+          <p className="text-center text-sm font-bold text-primary bg-primary/10 rounded-lg py-2 px-3">
+            Una vez tengas tu ticket descárgalo y presiona WhatsApp
+          </p>
           
           <div className="flex items-center justify-between pt-2">
             <div className="flex items-center gap-1">
