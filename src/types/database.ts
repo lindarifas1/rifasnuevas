@@ -36,7 +36,9 @@ export interface GroupedOrder {
   reference_number: string;
   payment_proof_url: string | null;
   payment_status: 'pending' | 'paid' | 'rejected' | 'reserved';
-  total_amount: number;
+  total_amount: number; // Expected total based on raffle price
+  amount_paid: number; // Actual amount paid
+  debt: number; // Remaining debt
   created_at: string;
   ticket_ids: string[];
 }
