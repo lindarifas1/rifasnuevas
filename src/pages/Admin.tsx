@@ -32,7 +32,22 @@ import {
   MessageCircle,
   UserPlus,
   Filter,
+  History,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+
+interface ApprovalHistoryItem {
+  order_id: string;
+  buyer_name: string;
+  buyer_phone: string;
+  numbers: number[];
+  total_amount: number;
+  raffle_title: string;
+  raffle_number_count: number;
+  approved_at: string;
+}
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -55,6 +70,8 @@ const Admin = () => {
   const [addingClient, setAddingClient] = useState(false);
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const [approvedOrder, setApprovedOrder] = useState<GroupedOrder | null>(null);
+  const [approvalHistory, setApprovalHistory] = useState<ApprovalHistoryItem[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [newClient, setNewClient] = useState({
     name: '',
     cedula: '',
@@ -81,7 +98,36 @@ const Admin = () => {
     fetchRaffles();
     fetchAllTickets();
     fetchSiteSettings();
+    loadApprovalHistory();
   }, [navigate]);
+
+  const loadApprovalHistory = () => {
+    try {
+      const saved = localStorage.getItem('approvalHistory');
+      if (saved) {
+        setApprovalHistory(JSON.parse(saved));
+      }
+    } catch (error) {
+      console.error('Error loading approval history:', error);
+    }
+  };
+
+  const saveToApprovalHistory = (order: GroupedOrder, raffleTitle: string, raffleNumberCount: number) => {
+    const newItem: ApprovalHistoryItem = {
+      order_id: order.order_id,
+      buyer_name: order.buyer_name,
+      buyer_phone: order.buyer_phone,
+      numbers: order.numbers,
+      total_amount: order.total_amount,
+      raffle_title: raffleTitle,
+      raffle_number_count: raffleNumberCount,
+      approved_at: new Date().toISOString(),
+    };
+    
+    const updated = [newItem, ...approvalHistory].slice(0, 10); // Keep only last 10
+    setApprovalHistory(updated);
+    localStorage.setItem('approvalHistory', JSON.stringify(updated));
+  };
 
   useEffect(() => {
     if (selectedRaffle) {
@@ -211,8 +257,12 @@ const Admin = () => {
       toast.success('Estado actualizado');
       if (selectedRaffle) fetchTickets(selectedRaffle);
       
-      // If approving, show the approval dialog with WhatsApp option
+      // If approving, show the approval dialog with WhatsApp option and save to history
       if (status === 'paid' && order) {
+        const raffleData = raffles.find(r => r.id === selectedRaffle);
+        if (raffleData) {
+          saveToApprovalHistory(order, raffleData.title, raffleData.number_count);
+        }
         setApprovedOrder(order);
         setApprovalDialogOpen(true);
       }
@@ -431,6 +481,15 @@ const Admin = () => {
     const cleanPhone = phone.replace(/\D/g, '');
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/${cleanPhone}?text=${encodedMessage}`, '_blank');
+  };
+
+  const getHistoryConfirmationMessage = (item: ApprovalHistoryItem) => {
+    const formattedNumbers = item.numbers
+      .sort((a, b) => a - b)
+      .map(n => formatNumber(n, item.raffle_number_count))
+      .join(', ');
+    
+    return `¡Hola ${item.buyer_name}! 🎉\n\nTu pago ha sido *CONFIRMADO* para la rifa "${item.raffle_title}".\n\n📌 Números: ${formattedNumbers}\n💰 Monto: $${item.total_amount.toFixed(2)}\n\n¡Buena suerte! 🍀`;
   };
 
   const selectedRaffleData = raffles.find(r => r.id === selectedRaffle);
@@ -917,6 +976,81 @@ const Admin = () => {
                   Rechazados ({rejectedOrders.length})
                 </Button>
               </div>
+            )}
+
+            {/* Approval History - Collapsible */}
+            {approvalHistory.length > 0 && (
+              <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
+                <Card className="border-dashed">
+                  <CollapsibleTrigger asChild>
+                    <CardHeader className="py-3 cursor-pointer hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <History className="w-4 h-4 text-muted-foreground" />
+                          <CardTitle className="text-sm font-medium">
+                            Historial de Aprobados ({approvalHistory.length})
+                          </CardTitle>
+                        </div>
+                        {historyOpen ? (
+                          <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </div>
+                    </CardHeader>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardContent className="pt-0 pb-3">
+                      <div className="space-y-2">
+                        {approvalHistory.map((item, index) => (
+                          <div 
+                            key={`${item.order_id}-${index}`}
+                            className="flex items-center justify-between p-2 bg-muted/30 rounded-lg text-sm"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-medium truncate">{item.buyer_name}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {item.raffle_title}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 mt-1">
+                                {item.numbers.slice(0, 5).map(n => (
+                                  <span 
+                                    key={n}
+                                    className="px-1.5 py-0.5 bg-primary/20 text-primary rounded text-xs font-medium"
+                                  >
+                                    {formatNumber(n, item.raffle_number_count)}
+                                  </span>
+                                ))}
+                                {item.numbers.length > 5 && (
+                                  <span className="text-xs text-muted-foreground">
+                                    +{item.numbers.length - 5} más
+                                  </span>
+                                )}
+                                <span className="text-xs text-muted-foreground ml-2">
+                                  {format(new Date(item.approved_at), 'dd/MM HH:mm')}
+                                </span>
+                              </div>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-success hover:bg-success/10 shrink-0 ml-2"
+                              onClick={() => openWhatsAppWithMessage(
+                                item.buyer_phone,
+                                getHistoryConfirmationMessage(item)
+                              )}
+                            >
+                              <MessageCircle className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
             )}
 
             {/* Stats */}
