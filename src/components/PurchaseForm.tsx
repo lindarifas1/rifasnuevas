@@ -72,10 +72,12 @@ export const PurchaseForm = ({
 
         if (uploadError) {
           console.error('Upload error:', uploadError);
+          toast.error('No se pudo subir el comprobante. Revisa la configuración de Storage e intenta de nuevo.');
+          throw uploadError;
         } else {
           const { data: urlData } = supabase.storage
             .from('payment-proofs')
-            .getPublicUrl(fileName);
+            .getPublicUrl(uploadData.path);
           paymentProofUrl = urlData.publicUrl;
         }
       }
