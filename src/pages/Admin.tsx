@@ -391,9 +391,9 @@ const Admin = () => {
       return;
     }
 
-    // Parse numbers (comma-separated)
+    // Parse numbers (comma or space separated)
     const numbersArray = newClient.numbers
-      .split(',')
+      .split(/[\s,]+/)
       .map(n => parseInt(n.trim()))
       .filter(n => !isNaN(n));
 
