@@ -780,7 +780,7 @@ const Admin = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header isAdmin onLogout={handleLogout} />
+        <Header isAdmin onLogout={handleLogout} appName={appName} adminWhatsapp={adminWhatsapp} />
         <div className="flex items-center justify-center h-[60vh]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
@@ -790,7 +790,7 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header isAdmin onLogout={handleLogout} />
+      <Header isAdmin onLogout={handleLogout} appName={appName} adminWhatsapp={adminWhatsapp} />
 
       <div className="container py-4 px-3 sm:py-6 sm:px-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
