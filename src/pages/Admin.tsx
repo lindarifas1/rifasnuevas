@@ -30,6 +30,8 @@ import {
   DollarSign,
   Settings,
   MessageCircle,
+  UserPlus,
+  Filter,
 } from 'lucide-react';
 
 const Admin = () => {
@@ -48,6 +50,16 @@ const Admin = () => {
   const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
   const [siteCover, setSiteCover] = useState('');
   const [adminWhatsapp, setAdminWhatsapp] = useState('');
+  const [orderFilter, setOrderFilter] = useState<'all' | 'paid' | 'pending' | 'rejected'>('all');
+  const [addClientDialogOpen, setAddClientDialogOpen] = useState(false);
+  const [addingClient, setAddingClient] = useState(false);
+  const [newClient, setNewClient] = useState({
+    name: '',
+    cedula: '',
+    phone: '',
+    numbers: '',
+    paymentStatus: 'paid' as 'paid' | 'pending' | 'reserved',
+  });
   const [newRaffle, setNewRaffle] = useState({
     title: '',
     description: '',
@@ -315,6 +327,77 @@ const Admin = () => {
     }
   };
 
+  const handleAddClient = async () => {
+    if (!selectedRaffle || !newClient.name || !newClient.cedula || !newClient.phone || !newClient.numbers) {
+      toast.error('Complete todos los campos requeridos');
+      return;
+    }
+
+    // Parse numbers (comma-separated)
+    const numbersArray = newClient.numbers
+      .split(',')
+      .map(n => parseInt(n.trim()))
+      .filter(n => !isNaN(n));
+
+    if (numbersArray.length === 0) {
+      toast.error('Ingrese al menos un número válido');
+      return;
+    }
+
+    // Check if numbers are available
+    const existingNumbers = tickets.map(t => t.number);
+    const unavailable = numbersArray.filter(n => existingNumbers.includes(n));
+    
+    if (unavailable.length > 0) {
+      toast.error(`Los números ${unavailable.join(', ')} ya están vendidos`);
+      return;
+    }
+
+    const selectedRaffleInfo = raffles.find(r => r.id === selectedRaffle);
+    if (!selectedRaffleInfo) return;
+
+    // Validate numbers are within range
+    const maxNumber = selectedRaffleInfo.number_count - 1;
+    const outOfRange = numbersArray.filter(n => n < 0 || n > maxNumber);
+    if (outOfRange.length > 0) {
+      toast.error(`Los números ${outOfRange.join(', ')} están fuera de rango (0-${maxNumber})`);
+      return;
+    }
+
+    setAddingClient(true);
+    try {
+      const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const totalAmount = numbersArray.length * selectedRaffleInfo.price;
+      
+      const ticketsToInsert = numbersArray.map(num => ({
+        raffle_id: selectedRaffle,
+        order_id: orderId,
+        number: num,
+        buyer_name: newClient.name.trim(),
+        buyer_cedula: newClient.cedula.trim(),
+        buyer_phone: newClient.phone.trim(),
+        reference_number: 'Manual - Admin',
+        payment_proof_url: null,
+        payment_status: newClient.paymentStatus,
+        amount_paid: selectedRaffleInfo.price,
+      }));
+
+      const { error } = await supabase.from('tickets').insert(ticketsToInsert);
+      if (error) throw error;
+
+      toast.success(`Cliente agregado con ${numbersArray.length} número(s)`);
+      setAddClientDialogOpen(false);
+      setNewClient({ name: '', cedula: '', phone: '', numbers: '', paymentStatus: 'paid' });
+      fetchTickets(selectedRaffle);
+      fetchAllTickets();
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Error al agregar cliente');
+    } finally {
+      setAddingClient(false);
+    }
+  };
+
   // Calculate sold numbers for each raffle using allTickets
   const getRaffleSoldCount = (raffleId: string) => {
     return allTickets.filter(t => t.raffle_id === raffleId && (t.payment_status === 'paid' || t.payment_status === 'reserved' || t.payment_status === 'pending')).length;
@@ -362,6 +445,16 @@ const Admin = () => {
   
   const paidOrders = groupedOrders.filter(o => o.payment_status === 'paid');
   const pendingOrders = groupedOrders.filter(o => o.payment_status === 'pending' || o.payment_status === 'reserved');
+  const rejectedOrders = groupedOrders.filter(o => o.payment_status === 'rejected');
+
+  // Apply filter
+  const filteredOrders = groupedOrders.filter(order => {
+    if (orderFilter === 'all') return true;
+    if (orderFilter === 'paid') return order.payment_status === 'paid';
+    if (orderFilter === 'pending') return order.payment_status === 'pending' || order.payment_status === 'reserved';
+    if (orderFilter === 'rejected') return order.payment_status === 'rejected';
+    return true;
+  });
 
   if (loading) {
     return (
@@ -728,29 +821,80 @@ const Admin = () => {
           </TabsContent>
 
           <TabsContent value="orders" className="space-y-4">
-            {/* Raffle Selector */}
+            {/* Raffle Selector and Add Client Button */}
             <Card>
               <CardContent className="py-4">
-                <div className="flex items-center gap-4">
-                  <Label>Seleccionar Rifa:</Label>
-                  <Select
-                    value={selectedRaffle || ''}
-                    onValueChange={setSelectedRaffle}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <div className="flex items-center gap-4 flex-1">
+                    <Label>Seleccionar Rifa:</Label>
+                    <Select
+                      value={selectedRaffle || ''}
+                      onValueChange={setSelectedRaffle}
+                    >
+                      <SelectTrigger className="w-64">
+                        <SelectValue placeholder="Seleccione una rifa" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {raffles.map((raffle) => (
+                          <SelectItem key={raffle.id} value={raffle.id}>
+                            {raffle.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button 
+                    variant="gold" 
+                    onClick={() => setAddClientDialogOpen(true)}
+                    disabled={!selectedRaffle}
                   >
-                    <SelectTrigger className="w-64">
-                      <SelectValue placeholder="Seleccione una rifa" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {raffles.map((raffle) => (
-                        <SelectItem key={raffle.id} value={raffle.id}>
-                          {raffle.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Agregar Cliente
+                  </Button>
                 </div>
               </CardContent>
             </Card>
+
+            {/* Order Filters */}
+            {selectedRaffle && (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant={orderFilter === 'all' ? 'default' : 'outline'}
+                  onClick={() => setOrderFilter('all')}
+                >
+                  <Filter className="w-4 h-4 mr-2" />
+                  Todos ({groupedOrders.length})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={orderFilter === 'paid' ? 'default' : 'outline'}
+                  onClick={() => setOrderFilter('paid')}
+                  className={orderFilter === 'paid' ? '' : 'text-success border-success hover:bg-success hover:text-success-foreground'}
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Aprobados ({paidOrders.length})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={orderFilter === 'pending' ? 'default' : 'outline'}
+                  onClick={() => setOrderFilter('pending')}
+                  className={orderFilter === 'pending' ? '' : 'text-warning border-warning hover:bg-warning hover:text-warning-foreground'}
+                >
+                  <Clock className="w-4 h-4 mr-2" />
+                  Pendientes ({pendingOrders.length})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={orderFilter === 'rejected' ? 'default' : 'outline'}
+                  onClick={() => setOrderFilter('rejected')}
+                  className={orderFilter === 'rejected' ? '' : 'text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground'}
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Rechazados ({rejectedOrders.length})
+                </Button>
+              </div>
+            )}
 
             {/* Stats */}
             {selectedRaffleData && (
@@ -782,16 +926,20 @@ const Admin = () => {
             )}
 
             {/* Orders List */}
-            {groupedOrders.length === 0 ? (
+            {filteredOrders.length === 0 ? (
               <Card>
                 <CardContent className="py-10 text-center">
                   <Users className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-                  <p className="text-muted-foreground">No hay pedidos para esta rifa</p>
+                  <p className="text-muted-foreground">
+                    {orderFilter === 'all' 
+                      ? 'No hay pedidos para esta rifa' 
+                      : `No hay pedidos ${orderFilter === 'paid' ? 'aprobados' : orderFilter === 'pending' ? 'pendientes' : 'rechazados'}`}
+                  </p>
                 </CardContent>
               </Card>
             ) : (
               <div className="space-y-3">
-                {groupedOrders.map((order) => (
+                {filteredOrders.map((order) => (
                   <Card key={order.order_id} className="overflow-hidden">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-4">
@@ -920,6 +1068,86 @@ const Admin = () => {
               ) : (
                 <p className="text-center text-muted-foreground">No hay comprobante disponible</p>
               )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Client Dialog */}
+        <Dialog open={addClientDialogOpen} onOpenChange={setAddClientDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Agregar Cliente</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>Nombre *</Label>
+                <Input
+                  value={newClient.name}
+                  onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
+                  placeholder="Nombre completo del cliente"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Cédula *</Label>
+                <Input
+                  value={newClient.cedula}
+                  onChange={(e) => setNewClient({ ...newClient, cedula: e.target.value })}
+                  placeholder="V-12345678"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Teléfono *</Label>
+                <Input
+                  value={newClient.phone}
+                  onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
+                  placeholder="+58412XXXXXXX"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Números (separados por coma) *</Label>
+                <Input
+                  value={newClient.numbers}
+                  onChange={(e) => setNewClient({ ...newClient, numbers: e.target.value })}
+                  placeholder="Ej: 5, 12, 45"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Ingrese los números separados por coma. Rango: 0-{selectedRaffleData ? selectedRaffleData.number_count - 1 : 99}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Estado del Pago</Label>
+                <Select
+                  value={newClient.paymentStatus}
+                  onValueChange={(value: 'paid' | 'pending' | 'reserved') => setNewClient({ ...newClient, paymentStatus: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="paid">Pagado</SelectItem>
+                    <SelectItem value="pending">Pendiente</SelectItem>
+                    <SelectItem value="reserved">Reservado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button 
+                onClick={handleAddClient} 
+                className="w-full" 
+                variant="gold"
+                disabled={addingClient}
+              >
+                {addingClient ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Agregando...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Agregar Cliente
+                  </>
+                )}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
