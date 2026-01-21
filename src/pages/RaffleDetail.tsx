@@ -28,6 +28,8 @@ const RaffleDetail = () => {
   const [loading, setLoading] = useState(true);
   const [showPurchaseForm, setShowPurchaseForm] = useState(false);
   const [adminWhatsapp, setAdminWhatsapp] = useState('');
+  const [appName, setAppName] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
   const isAdmin = localStorage.getItem('isAdmin') === 'true';
 
   useEffect(() => {
@@ -42,12 +44,14 @@ const RaffleDetail = () => {
     try {
       const { data, error } = await supabase
         .from('site_settings')
-        .select('admin_whatsapp')
+        .select('admin_whatsapp, app_name, logo_url')
         .single();
 
       if (error && error.code !== 'PGRST116') throw error;
       if (data) {
         setAdminWhatsapp(data.admin_whatsapp || '');
+        setAppName(data.app_name || '');
+        setLogoUrl(data.logo_url || '');
       }
     } catch (error) {
       console.error('Error fetching site settings:', error);
@@ -133,7 +137,7 @@ const RaffleDetail = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header isAdmin={isAdmin} />
+        <Header isAdmin={isAdmin} appName={appName} logoUrl={logoUrl} />
         <div className="flex items-center justify-center h-[60vh]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
@@ -147,7 +151,7 @@ const RaffleDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header isAdmin={isAdmin} />
+      <Header isAdmin={isAdmin} appName={appName} logoUrl={logoUrl} />
 
       {/* Back Button */}
       <div className="container py-4">
