@@ -27,6 +27,8 @@ import {
   Trophy,
   Users,
   DollarSign,
+  Settings,
+  MessageCircle,
 } from 'lucide-react';
 
 const Admin = () => {
@@ -37,7 +39,9 @@ const Admin = () => {
   const [selectedRaffle, setSelectedRaffle] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [coverDialogOpen, setCoverDialogOpen] = useState(false);
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [siteCover, setSiteCover] = useState('');
+  const [adminWhatsapp, setAdminWhatsapp] = useState('');
   const [newRaffle, setNewRaffle] = useState({
     title: '',
     description: '',
@@ -108,7 +112,8 @@ const Admin = () => {
 
       if (error && error.code !== 'PGRST116') throw error;
       if (data) {
-        setSiteCover(data.cover_image);
+        setSiteCover(data.cover_image || '');
+        setAdminWhatsapp(data.admin_whatsapp || '');
       }
     } catch (error) {
       console.error('Error:', error);
@@ -207,6 +212,36 @@ const Admin = () => {
     }
   };
 
+  const handleUpdateAdminWhatsapp = async () => {
+    try {
+      const { data: existing } = await supabase
+        .from('site_settings')
+        .select('id')
+        .single();
+
+      if (existing) {
+        const { error } = await supabase
+          .from('site_settings')
+          .update({ admin_whatsapp: adminWhatsapp })
+          .eq('id', existing.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('site_settings')
+          .insert([{ admin_whatsapp: adminWhatsapp }]);
+
+        if (error) throw error;
+      }
+
+      toast.success('WhatsApp actualizado');
+      setSettingsDialogOpen(false);
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Error al actualizar');
+    }
+  };
+
   const handleToggleRaffleStatus = async (raffle: Raffle) => {
     const newStatus = raffle.status === 'active' ? 'finished' : 'active';
     
@@ -256,6 +291,36 @@ const Admin = () => {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Panel de Administración</h1>
           <div className="flex gap-2">
+            <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  WhatsApp
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Configurar WhatsApp del Admin</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label>Número de WhatsApp</Label>
+                    <Input
+                      value={adminWhatsapp}
+                      onChange={(e) => setAdminWhatsapp(e.target.value)}
+                      placeholder="Ej: +58412XXXXXXX"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Incluye el código de país sin espacios ni guiones
+                    </p>
+                  </div>
+                  <Button onClick={handleUpdateAdminWhatsapp} className="w-full">
+                    Guardar WhatsApp
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
             <Dialog open={coverDialogOpen} onOpenChange={setCoverDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
