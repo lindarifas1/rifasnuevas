@@ -11,6 +11,7 @@ const Index = () => {
   const [ticketCounts, setTicketCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [coverImage, setCoverImage] = useState<string>(heroBanner);
+  const [appName, setAppName] = useState('RifaMax');
   const isAdmin = localStorage.getItem('isAdmin') === 'true';
 
   useEffect(() => {
@@ -64,7 +65,8 @@ const Index = () => {
 
       if (error && error.code !== 'PGRST116') throw error;
       if (data) {
-        setCoverImage(data.cover_image);
+        setCoverImage(data.cover_image || heroBanner);
+        setAppName(data.app_name || 'RifaMax');
       }
     } catch (error) {
       console.error('Error fetching site settings:', error);
@@ -73,7 +75,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header isAdmin={isAdmin} />
+      <Header isAdmin={isAdmin} appName={appName} />
       
       {/* Hero Section - Full image without cropping */}
       <section className="bg-black">
@@ -121,7 +123,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="border-t bg-card py-6 mt-8">
         <div className="container text-center text-sm text-muted-foreground">
-          <p>© 2024 RifaMax. Todos los derechos reservados.</p>
+          <p>© 2024 {appName}. Todos los derechos reservados.</p>
         </div>
       </footer>
     </div>

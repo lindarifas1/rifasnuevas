@@ -5,9 +5,10 @@ import { Settings, Trophy, LogOut } from 'lucide-react';
 interface HeaderProps {
   isAdmin?: boolean;
   onLogout?: () => void;
+  appName?: string;
 }
 
-export const Header = ({ isAdmin, onLogout }: HeaderProps) => {
+export const Header = ({ isAdmin, onLogout, appName = 'RifaMax' }: HeaderProps) => {
   const navigate = useNavigate();
 
   const handleLogin = () => {
@@ -30,7 +31,7 @@ export const Header = ({ isAdmin, onLogout }: HeaderProps) => {
           <div className="w-10 h-10 rounded-xl gradient-gold flex items-center justify-center shadow-gold">
             <Trophy className="w-6 h-6 text-primary-foreground" />
           </div>
-          <span className="text-xl font-bold">RifaMax</span>
+          <span className="text-xl font-bold">{appName}</span>
         </div>
 
         <div className="flex items-center gap-2">

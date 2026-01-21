@@ -4,6 +4,7 @@ import { Header } from '@/components/Header';
 import { NumberGrid } from '@/components/NumberGrid';
 import { PurchaseForm } from '@/components/PurchaseForm';
 import { VerifyNumbers } from '@/components/VerifyNumbers';
+import { TermsModal } from '@/components/TermsModal';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Raffle, Ticket } from '@/types/database';
@@ -27,14 +28,34 @@ const RaffleDetail = () => {
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPurchaseForm, setShowPurchaseForm] = useState(false);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
+  const [termsContent, setTermsContent] = useState('');
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
   const isAdmin = localStorage.getItem('isAdmin') === 'true';
 
   useEffect(() => {
     if (id) {
       fetchRaffle();
       fetchTickets();
+      fetchTermsConditions();
     }
   }, [id]);
+
+  const fetchTermsConditions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('site_settings')
+        .select('terms_conditions')
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      if (data?.terms_conditions) {
+        setTermsContent(data.terms_conditions);
+      }
+    } catch (error) {
+      console.error('Error fetching terms:', error);
+    }
+  };
 
   const fetchRaffle = async () => {
     try {
@@ -85,7 +106,22 @@ const RaffleDetail = () => {
   const handlePurchaseSuccess = () => {
     setShowPurchaseForm(false);
     setSelectedNumbers([]);
+    setHasAcceptedTerms(false);
     fetchTickets();
+  };
+
+  const handleParticipateClick = () => {
+    if (hasAcceptedTerms || !termsContent) {
+      setShowPurchaseForm(true);
+    } else {
+      setTermsModalOpen(true);
+    }
+  };
+
+  const handleAcceptTerms = () => {
+    setHasAcceptedTerms(true);
+    setTermsModalOpen(false);
+    setShowPurchaseForm(true);
   };
 
   if (loading) {
@@ -207,13 +243,20 @@ const RaffleDetail = () => {
                   <Button 
                     variant="gold" 
                     size="lg" 
-                    onClick={() => setShowPurchaseForm(true)}
+                    onClick={handleParticipateClick}
                     className="gap-2"
                   >
                     <ShoppingCart className="w-5 h-5" />
                     Comprar
                   </Button>
                 </div>
+
+                <TermsModal
+                  open={termsModalOpen}
+                  onOpenChange={setTermsModalOpen}
+                  onAccept={handleAcceptTerms}
+                  termsContent={termsContent}
+                />
               </div>
             )}
           </>

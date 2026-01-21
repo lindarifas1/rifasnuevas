@@ -74,6 +74,9 @@ const Admin = () => {
   const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
   const [siteCover, setSiteCover] = useState('');
   const [adminWhatsapp, setAdminWhatsapp] = useState('');
+  const [appName, setAppName] = useState('RifaMax');
+  const [termsConditions, setTermsConditions] = useState('');
+  const [termsDialogOpen, setTermsDialogOpen] = useState(false);
   const [orderFilter, setOrderFilter] = useState<'all' | 'paid' | 'pending' | 'rejected'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [addClientDialogOpen, setAddClientDialogOpen] = useState(false);
@@ -263,9 +266,46 @@ const Admin = () => {
       if (data) {
         setSiteCover(data.cover_image || '');
         setAdminWhatsapp(data.admin_whatsapp || '');
+        setAppName(data.app_name || 'RifaMax');
+        setTermsConditions(data.terms_conditions || '');
       }
     } catch (error) {
       console.error('Error:', error);
+    }
+  };
+
+  const handleUpdateAppSettings = async () => {
+    try {
+      const { data: existing } = await supabase
+        .from('site_settings')
+        .select('id')
+        .single();
+
+      const settingsData = { 
+        app_name: appName, 
+        terms_conditions: termsConditions 
+      };
+
+      if (existing) {
+        const { error } = await supabase
+          .from('site_settings')
+          .update(settingsData)
+          .eq('id', existing.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('site_settings')
+          .insert([settingsData]);
+
+        if (error) throw error;
+      }
+
+      toast.success('Configuración guardada');
+      setTermsDialogOpen(false);
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Error al actualizar');
     }
   };
 
@@ -663,6 +703,45 @@ const Admin = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
           <h1 className="text-xl sm:text-2xl font-bold">Panel de Administración</h1>
           <div className="flex flex-wrap gap-1.5 sm:gap-2">
+            <Dialog open={termsDialogOpen} onOpenChange={setTermsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
+                  <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Configuración</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Configuración General</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label>Nombre de la Aplicación</Label>
+                    <Input
+                      value={appName}
+                      onChange={(e) => setAppName(e.target.value)}
+                      placeholder="Ej: RifaMax"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Términos y Condiciones</Label>
+                    <Textarea
+                      value={termsConditions}
+                      onChange={(e) => setTermsConditions(e.target.value)}
+                      placeholder="Escribe los términos y condiciones..."
+                      rows={6}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Este texto se mostrará a los usuarios antes de participar en una rifa
+                    </p>
+                  </div>
+                  <Button onClick={handleUpdateAppSettings} className="w-full">
+                    Guardar Configuración
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
             <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
