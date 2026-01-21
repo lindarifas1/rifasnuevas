@@ -553,18 +553,18 @@ const Admin = () => {
     <div className="min-h-screen bg-background">
       <Header isAdmin />
 
-      <div className="container py-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Panel de Administración</h1>
-          <div className="flex gap-2">
+      <div className="container py-4 px-3 sm:py-6 sm:px-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold">Panel de Administración</h1>
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
             <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  WhatsApp
+                <Button variant="outline" size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
+                  <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">WhatsApp</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-[95vw] sm:max-w-lg">
                 <DialogHeader>
                   <DialogTitle>Configurar WhatsApp del Admin</DialogTitle>
                 </DialogHeader>
@@ -589,12 +589,12 @@ const Admin = () => {
 
             <Dialog open={coverDialogOpen} onOpenChange={setCoverDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Image className="w-4 h-4 mr-2" />
-                  Portada
+                <Button variant="outline" size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
+                  <Image className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Portada</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-[95vw] sm:max-w-lg">
                 <DialogHeader>
                   <DialogTitle>Imagen de Portada del Sitio</DialogTitle>
                 </DialogHeader>
@@ -623,16 +623,16 @@ const Admin = () => {
 
             <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="gold">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nueva Rifa
+                <Button variant="gold" size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
+                  <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Nueva Rifa</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-lg">
+              <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Crear Nueva Rifa</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4 pt-4 max-h-[70vh] overflow-y-auto">
+                <div className="space-y-4 pt-4">
                   <div className="space-y-2">
                     <Label>Título *</Label>
                     <Input
@@ -657,7 +657,7 @@ const Admin = () => {
                       placeholder="https://ejemplo.com/imagen.jpg"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label>Precio *</Label>
                       <Input
@@ -668,7 +668,7 @@ const Admin = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Cantidad de Números</Label>
+                      <Label>Cant. Números</Label>
                       <Select
                         value={newRaffle.number_count.toString()}
                         onValueChange={(value) => setNewRaffle({ ...newRaffle, number_count: parseInt(value) })}
@@ -677,8 +677,8 @@ const Admin = () => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="100">100 (00-99)</SelectItem>
-                          <SelectItem value="1000">1000 (000-999)</SelectItem>
+                          <SelectItem value="100">100</SelectItem>
+                          <SelectItem value="1000">1000</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -700,12 +700,12 @@ const Admin = () => {
 
             {/* Edit Raffle Dialog */}
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-              <DialogContent className="max-w-lg">
+              <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Editar Rifa</DialogTitle>
                 </DialogHeader>
                 {editingRaffle && (
-                  <div className="space-y-4 pt-4 max-h-[70vh] overflow-y-auto">
+                  <div className="space-y-4 pt-4">
                     <div className="space-y-2">
                       <Label>Título *</Label>
                       <Input
@@ -720,7 +720,7 @@ const Admin = () => {
                         value={editingRaffle.description}
                         onChange={(e) => setEditingRaffle({ ...editingRaffle, description: e.target.value })}
                         placeholder="Descripción del premio..."
-                        rows={4}
+                        rows={3}
                       />
                     </div>
                     <div className="space-y-2">
@@ -734,11 +734,11 @@ const Admin = () => {
                         <img
                           src={editingRaffle.cover_image}
                           alt="Preview"
-                          className="w-full h-32 object-cover rounded-lg mt-2"
+                          className="w-full h-24 object-cover rounded-lg mt-2"
                         />
                       )}
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
                         <Label>Precio *</Label>
                         <Input
@@ -749,7 +749,7 @@ const Admin = () => {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Cantidad de Números</Label>
+                        <Label>Cant. Números</Label>
                         <Select
                           value={editingRaffle.number_count.toString()}
                           onValueChange={(value) => setEditingRaffle({ ...editingRaffle, number_count: parseInt(value) })}
@@ -758,8 +758,8 @@ const Admin = () => {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="100">100 (00-99)</SelectItem>
-                            <SelectItem value="1000">1000 (000-999)</SelectItem>
+                            <SelectItem value="100">100</SelectItem>
+                            <SelectItem value="1000">1000</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -870,19 +870,21 @@ const Admin = () => {
                           </p>
                         </div>
                         
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-1.5 sm:gap-2">
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleEditRaffle(raffle)}
+                            className="text-xs sm:text-sm px-2 sm:px-3"
                           >
-                            <Edit className="w-4 h-4 mr-1" />
-                            Editar
+                            <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1" />
+                            <span className="hidden sm:inline">Editar</span>
                           </Button>
                           <Button
                             size="sm"
                             variant={raffle.status === 'active' ? 'outline' : 'default'}
                             onClick={() => handleToggleRaffleStatus(raffle)}
+                            className="text-xs sm:text-sm px-2 sm:px-3"
                           >
                             {raffle.status === 'active' ? 'Finalizar' : 'Activar'}
                           </Button>
@@ -890,8 +892,9 @@ const Admin = () => {
                             size="sm"
                             variant="destructive"
                             onClick={() => handleDeleteRaffle(raffle.id)}
+                            className="px-2 sm:px-3"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </Button>
                         </div>
                       </CardContent>
@@ -1055,28 +1058,28 @@ const Admin = () => {
 
             {/* Stats */}
             {selectedRaffleData && (
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4">
                 <Card>
-                  <CardContent className="py-4 text-center">
-                    <DollarSign className="w-8 h-8 mx-auto text-success mb-2" />
-                    <p className="text-2xl font-bold text-success">
-                      ${paidOrders.reduce((sum, o) => sum + o.total_amount, 0)}
+                  <CardContent className="py-2 sm:py-4 px-2 sm:px-4 text-center">
+                    <DollarSign className="w-5 h-5 sm:w-8 sm:h-8 mx-auto text-success mb-1 sm:mb-2" />
+                    <p className="text-base sm:text-2xl font-bold text-success">
+                      ${paidOrders.reduce((sum, o) => sum + o.total_amount, 0).toFixed(0)}
                     </p>
-                    <p className="text-sm text-muted-foreground">Recaudado</p>
+                    <p className="text-[10px] sm:text-sm text-muted-foreground">Recaudado</p>
                   </CardContent>
                 </Card>
                 <Card>
-                  <CardContent className="py-4 text-center">
-                    <CheckCircle className="w-8 h-8 mx-auto text-success mb-2" />
-                    <p className="text-2xl font-bold">{paidOrders.length}</p>
-                    <p className="text-sm text-muted-foreground">Pedidos Pagados</p>
+                  <CardContent className="py-2 sm:py-4 px-2 sm:px-4 text-center">
+                    <CheckCircle className="w-5 h-5 sm:w-8 sm:h-8 mx-auto text-success mb-1 sm:mb-2" />
+                    <p className="text-base sm:text-2xl font-bold">{paidOrders.length}</p>
+                    <p className="text-[10px] sm:text-sm text-muted-foreground">Pagados</p>
                   </CardContent>
                 </Card>
                 <Card>
-                  <CardContent className="py-4 text-center">
-                    <Clock className="w-8 h-8 mx-auto text-warning mb-2" />
-                    <p className="text-2xl font-bold">{pendingOrders.length}</p>
-                    <p className="text-sm text-muted-foreground">Pendientes</p>
+                  <CardContent className="py-2 sm:py-4 px-2 sm:px-4 text-center">
+                    <Clock className="w-5 h-5 sm:w-8 sm:h-8 mx-auto text-warning mb-1 sm:mb-2" />
+                    <p className="text-base sm:text-2xl font-bold">{pendingOrders.length}</p>
+                    <p className="text-[10px] sm:text-sm text-muted-foreground">Pendientes</p>
                   </CardContent>
                 </Card>
               </div>
@@ -1095,111 +1098,118 @@ const Admin = () => {
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {filteredOrders.map((order) => (
                   <Card key={order.order_id} className="overflow-hidden">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex flex-wrap items-center gap-2 mb-3">
-                            {order.numbers
-                              .sort((a, b) => a - b)
-                              .map((num) => (
-                                <span 
-                                  key={num} 
-                                  className="px-2 py-1 bg-primary text-primary-foreground font-bold rounded-full text-sm"
-                                >
-                                  {formatNumber(num, selectedRaffleData?.number_count || 100)}
-                                </span>
-                              ))}
-                            <div className={`px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${
-                              order.payment_status === 'paid'
-                                ? 'bg-success/10 text-success'
-                                : order.payment_status === 'rejected'
-                                ? 'bg-destructive/10 text-destructive'
-                                : 'bg-warning/10 text-warning'
-                            }`}>
-                              {order.payment_status === 'paid' && <CheckCircle className="w-3 h-3" />}
-                              {order.payment_status === 'rejected' && <XCircle className="w-3 h-3" />}
-                              {(order.payment_status === 'pending' || order.payment_status === 'reserved') && <Clock className="w-3 h-3" />}
-                              {order.payment_status === 'paid' ? 'Pagado' : 
-                               order.payment_status === 'rejected' ? 'Rechazado' :
-                               order.payment_status === 'reserved' ? 'Reservado' : 'Pendiente'}
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-                            <div>
-                              <span className="text-muted-foreground">Nombre:</span>
-                              <p className="font-medium">{order.buyer_name}</p>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Cédula:</span>
-                              <p className="font-medium">{order.buyer_cedula}</p>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Teléfono:</span>
-                              <p className="font-medium">{order.buyer_phone}</p>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Referencia:</span>
-                              <p className="font-medium">{order.reference_number || 'N/A'}</p>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Monto Total:</span>
-                              <p className="font-bold text-primary">${order.total_amount.toFixed(2)}</p>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Fecha:</span>
-                              <p className="font-medium">
-                                {format(new Date(order.created_at), 'dd/MM/yyyy HH:mm')}
-                              </p>
-                            </div>
-                          </div>
+                    <CardContent className="p-3 sm:p-4">
+                      {/* Numbers and status badge */}
+                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+                        {order.numbers
+                          .sort((a, b) => a - b)
+                          .slice(0, 6)
+                          .map((num) => (
+                            <span 
+                              key={num} 
+                              className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-primary text-primary-foreground font-bold rounded-full text-xs sm:text-sm"
+                            >
+                              {formatNumber(num, selectedRaffleData?.number_count || 100)}
+                            </span>
+                          ))}
+                        {order.numbers.length > 6 && (
+                          <span className="text-xs text-muted-foreground">+{order.numbers.length - 6}</span>
+                        )}
+                        <div className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold flex items-center gap-0.5 sm:gap-1 ml-auto ${
+                          order.payment_status === 'paid'
+                            ? 'bg-success/10 text-success'
+                            : order.payment_status === 'rejected'
+                            ? 'bg-destructive/10 text-destructive'
+                            : 'bg-warning/10 text-warning'
+                        }`}>
+                          {order.payment_status === 'paid' && <CheckCircle className="w-3 h-3" />}
+                          {order.payment_status === 'rejected' && <XCircle className="w-3 h-3" />}
+                          {(order.payment_status === 'pending' || order.payment_status === 'reserved') && <Clock className="w-3 h-3" />}
+                          <span className="hidden sm:inline">
+                            {order.payment_status === 'paid' ? 'Pagado' : 
+                             order.payment_status === 'rejected' ? 'Rechazado' :
+                             order.payment_status === 'reserved' ? 'Reservado' : 'Pendiente'}
+                          </span>
                         </div>
-                        <div className="flex flex-col gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-success border-success hover:bg-success hover:text-success-foreground"
-                            onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'paid', order)}
-                            disabled={order.payment_status === 'paid'}
-                          >
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                            Aprobar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
-                            onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'rejected')}
-                            disabled={order.payment_status === 'rejected'}
-                          >
-                            <XCircle className="w-4 h-4 mr-2" />
-                            Rechazar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full"
-                            disabled={!order.payment_proof_url}
-                            onClick={() => {
-                              if (!order.payment_proof_url) return;
-                              setSelectedProofUrl(order.payment_proof_url);
-                              setProofDialogOpen(true);
-                            }}
-                          >
-                            <Eye className="w-4 h-4 mr-2" />
-                            Ver comprobante
-                          </Button>
-                          <WhatsAppMessageMenu
-                            buyerPhone={order.buyer_phone}
-                            buyerName={order.buyer_name}
-                            numbers={order.numbers}
-                            totalAmount={order.total_amount}
-                            raffleName={selectedRaffleData?.title}
-                            formatNumber={(num) => formatNumber(num, selectedRaffleData?.number_count || 100)}
-                          />
+                      </div>
+
+                      {/* Client info - compact grid */}
+                      <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs sm:text-sm mb-2 sm:mb-3">
+                        <div className="truncate">
+                          <span className="text-muted-foreground">Nombre: </span>
+                          <span className="font-medium">{order.buyer_name}</span>
                         </div>
+                        <div className="truncate">
+                          <span className="text-muted-foreground">Cédula: </span>
+                          <span className="font-medium">{order.buyer_cedula}</span>
+                        </div>
+                        <div className="truncate">
+                          <span className="text-muted-foreground">Tel: </span>
+                          <span className="font-medium text-[11px] sm:text-sm">{order.buyer_phone}</span>
+                        </div>
+                        <div className="truncate">
+                          <span className="text-muted-foreground">Ref: </span>
+                          <span className="font-medium text-[11px] sm:text-sm">{order.reference_number || 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Monto: </span>
+                          <span className="font-bold text-primary">${order.total_amount.toFixed(2)}</span>
+                        </div>
+                        <div className="truncate">
+                          <span className="text-muted-foreground">Fecha: </span>
+                          <span className="font-medium text-[11px] sm:text-sm">
+                            {format(new Date(order.created_at), 'dd/MM HH:mm')}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Action buttons - horizontal scroll on mobile */}
+                      <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-success border-success hover:bg-success hover:text-success-foreground text-xs px-2 sm:px-3 shrink-0"
+                          onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'paid', order)}
+                          disabled={order.payment_status === 'paid'}
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 sm:mr-1" />
+                          <span className="hidden sm:inline">Aprobar</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground text-xs px-2 sm:px-3 shrink-0"
+                          onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'rejected')}
+                          disabled={order.payment_status === 'rejected'}
+                        >
+                          <XCircle className="w-3.5 h-3.5 sm:mr-1" />
+                          <span className="hidden sm:inline">Rechazar</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs px-2 sm:px-3 shrink-0"
+                          disabled={!order.payment_proof_url}
+                          onClick={() => {
+                            if (!order.payment_proof_url) return;
+                            setSelectedProofUrl(order.payment_proof_url);
+                            setProofDialogOpen(true);
+                          }}
+                        >
+                          <Eye className="w-3.5 h-3.5 sm:mr-1" />
+                          <span className="hidden sm:inline">Ver</span>
+                        </Button>
+                        <WhatsAppMessageMenu
+                          buyerPhone={order.buyer_phone}
+                          buyerName={order.buyer_name}
+                          numbers={order.numbers}
+                          totalAmount={order.total_amount}
+                          raffleName={selectedRaffleData?.title}
+                          formatNumber={(num) => formatNumber(num, selectedRaffleData?.number_count || 100)}
+                        />
                       </div>
                     </CardContent>
                   </Card>
