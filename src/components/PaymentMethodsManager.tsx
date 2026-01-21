@@ -1,15 +1,29 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { PaymentMethod } from '@/types/database';
+import { PaymentMethod, PaymentField } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, CreditCard, GripVertical } from 'lucide-react';
+import { Plus, Edit, Trash2, CreditCard, GripVertical, X } from 'lucide-react';
+
+// Helper to parse payment_fields from database
+const parsePaymentFields = (data: unknown): PaymentField[] | null => {
+  if (!data) return null;
+  if (Array.isArray(data)) {
+    return data.filter(
+      (item): item is PaymentField => 
+        typeof item === 'object' && 
+        item !== null && 
+        'label' in item && 
+        'value' in item
+    );
+  }
+  return null;
+};
 
 export const PaymentMethodsManager = () => {
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
@@ -19,10 +33,10 @@ export const PaymentMethodsManager = () => {
   const [formData, setFormData] = useState({
     name: '',
     image_url: '',
-    details: '',
     is_active: true,
     display_order: 0,
   });
+  const [paymentFields, setPaymentFields] = useState<PaymentField[]>([]);
 
   useEffect(() => {
     fetchMethods();
@@ -36,7 +50,14 @@ export const PaymentMethodsManager = () => {
         .order('display_order', { ascending: true });
 
       if (error) throw error;
-      setMethods(data as PaymentMethod[] || []);
+      
+      // Parse payment_fields for each method
+      const parsedMethods = (data || []).map(method => ({
+        ...method,
+        payment_fields: parsePaymentFields(method.payment_fields)
+      })) as PaymentMethod[];
+      
+      setMethods(parsedMethods);
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -50,40 +71,65 @@ export const PaymentMethodsManager = () => {
       setFormData({
         name: method.name,
         image_url: method.image_url || '',
-        details: method.details,
         is_active: method.is_active,
         display_order: method.display_order,
       });
+      setPaymentFields(method.payment_fields || []);
     } else {
       setEditingMethod(null);
       setFormData({
         name: '',
         image_url: '',
-        details: '',
         is_active: true,
         display_order: methods.length,
       });
+      setPaymentFields([{ label: '', value: '' }]);
     }
     setDialogOpen(true);
   };
 
+  const handleAddField = () => {
+    setPaymentFields([...paymentFields, { label: '', value: '' }]);
+  };
+
+  const handleRemoveField = (index: number) => {
+    setPaymentFields(paymentFields.filter((_, i) => i !== index));
+  };
+
+  const handleFieldChange = (index: number, key: 'label' | 'value', value: string) => {
+    const newFields = [...paymentFields];
+    newFields[index] = { ...newFields[index], [key]: value };
+    setPaymentFields(newFields);
+  };
+
   const handleSave = async () => {
-    if (!formData.name || !formData.details) {
-      toast.error('Nombre y detalles son requeridos');
+    if (!formData.name) {
+      toast.error('El nombre es requerido');
+      return;
+    }
+
+    // Filter out empty fields
+    const validFields = paymentFields.filter(f => f.label.trim() && f.value.trim());
+    
+    if (validFields.length === 0) {
+      toast.error('Agrega al menos un campo de pago');
       return;
     }
 
     try {
+      const dataToSave = {
+        name: formData.name,
+        image_url: formData.image_url || null,
+        details: validFields.map(f => `${f.label}: ${f.value}`).join('\n'),
+        payment_fields: validFields,
+        is_active: formData.is_active,
+        display_order: formData.display_order,
+      };
+
       if (editingMethod) {
         const { error } = await supabase
           .from('payment_methods')
-          .update({
-            name: formData.name,
-            image_url: formData.image_url || null,
-            details: formData.details,
-            is_active: formData.is_active,
-            display_order: formData.display_order,
-          })
+          .update(dataToSave)
           .eq('id', editingMethod.id);
 
         if (error) throw error;
@@ -91,13 +137,7 @@ export const PaymentMethodsManager = () => {
       } else {
         const { error } = await supabase
           .from('payment_methods')
-          .insert([{
-            name: formData.name,
-            image_url: formData.image_url || null,
-            details: formData.details,
-            is_active: formData.is_active,
-            display_order: formData.display_order,
-          }]);
+          .insert([dataToSave]);
 
         if (error) throw error;
         toast.success('Método creado');
@@ -177,8 +217,8 @@ export const PaymentMethodsManager = () => {
               
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">{method.name}</p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {method.details.split('\n')[0]}
+                <p className="text-xs text-muted-foreground">
+                  {method.payment_fields?.length || 0} campo(s)
                 </p>
               </div>
               
@@ -215,7 +255,7 @@ export const PaymentMethodsManager = () => {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-md">
+        <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingMethod ? 'Editar Método' : 'Nuevo Método de Pago'}
@@ -246,18 +286,56 @@ export const PaymentMethodsManager = () => {
                 />
               )}
             </div>
-            
-            <div className="space-y-2">
-              <Label>Detalles de Pago *</Label>
-              <Textarea
-                value={formData.details}
-                onChange={(e) => setFormData({ ...formData, details: e.target.value })}
-                placeholder="Banco: ...\nTeléfono: ...\nCédula: ..."
-                rows={4}
-              />
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Campos de Pago *</Label>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleAddField}
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Agregar
+                </Button>
+              </div>
+              
               <p className="text-xs text-muted-foreground">
-                Usa Enter para separar líneas
+                Cada campo podrá ser copiado individualmente por el cliente
               </p>
+              
+              <div className="space-y-3">
+                {paymentFields.map((field, index) => (
+                  <div key={index} className="flex items-start gap-2">
+                    <div className="flex-1 space-y-1">
+                      <Input
+                        placeholder="Etiqueta (ej: Banco, Teléfono, Cédula)"
+                        value={field.label}
+                        onChange={(e) => handleFieldChange(index, 'label', e.target.value)}
+                        className="text-sm"
+                      />
+                      <Input
+                        placeholder="Valor (ej: Banesco, 0412-1234567)"
+                        value={field.value}
+                        onChange={(e) => handleFieldChange(index, 'value', e.target.value)}
+                        className="text-sm"
+                      />
+                    </div>
+                    {paymentFields.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0 text-destructive hover:text-destructive"
+                        onClick={() => handleRemoveField(index)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
             
             <div className="flex items-center justify-between">
