@@ -100,6 +100,30 @@ const RaffleDetail = () => {
     setSelectedNumbers([]);
   };
 
+  const handlePurchaseClick = () => {
+    // Check if selected numbers exceed the limit
+    if (raffle?.max_numbers_per_client && selectedNumbers.length > raffle.max_numbers_per_client) {
+      toast.error(
+        `Solo puedes seleccionar máximo ${raffle.max_numbers_per_client} número(s) por cliente. Has seleccionado ${selectedNumbers.length}.`,
+        {
+          duration: 5000,
+          action: adminWhatsapp ? {
+            label: 'Contactar Admin',
+            onClick: () => {
+              const cleanPhone = adminWhatsapp.replace(/[^0-9]/g, '');
+              const message = encodeURIComponent(
+                `Hola, quiero comprar ${selectedNumbers.length} números en la rifa "${raffle.title}" pero el límite es ${raffle.max_numbers_per_client}. ¿Pueden ayudarme?`
+              );
+              window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
+            }
+          } : undefined
+        }
+      );
+      return;
+    }
+    setShowPurchaseForm(true);
+  };
+
   const handlePurchaseSuccess = () => {
     setShowPurchaseForm(false);
     setSelectedNumbers([]);
@@ -226,7 +250,7 @@ const RaffleDetail = () => {
                   <Button 
                     variant="gold" 
                     size="lg" 
-                    onClick={() => setShowPurchaseForm(true)}
+                    onClick={handlePurchaseClick}
                     className="gap-2"
                   >
                     <ShoppingCart className="w-5 h-5" />
