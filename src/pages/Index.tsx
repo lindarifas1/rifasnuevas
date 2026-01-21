@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Header } from '@/components/Header';
 import { RaffleCard } from '@/components/RaffleCard';
+import { PaymentMethodsDisplay } from '@/components/PaymentMethodsDisplay';
 import { supabase } from '@/integrations/supabase/client';
 import { Raffle, Ticket } from '@/types/database';
 import { Loader2, Trophy } from 'lucide-react';
@@ -119,6 +120,9 @@ const Index = () => {
           </div>
         )}
       </section>
+
+      {/* Payment Methods */}
+      <PaymentMethodsDisplay />
 
       {/* Footer */}
       <footer className="border-t bg-card py-6 mt-8">
