@@ -35,6 +35,7 @@ import {
   History,
   ChevronDown,
   ChevronUp,
+  Search,
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
@@ -66,6 +67,7 @@ const Admin = () => {
   const [siteCover, setSiteCover] = useState('');
   const [adminWhatsapp, setAdminWhatsapp] = useState('');
   const [orderFilter, setOrderFilter] = useState<'all' | 'paid' | 'pending' | 'rejected'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [addClientDialogOpen, setAddClientDialogOpen] = useState(false);
   const [addingClient, setAddingClient] = useState(false);
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
@@ -529,13 +531,30 @@ const Admin = () => {
   const pendingOrders = groupedOrders.filter(o => o.payment_status === 'pending' || o.payment_status === 'reserved');
   const rejectedOrders = groupedOrders.filter(o => o.payment_status === 'rejected');
 
-  // Apply filter
+  // Apply filter and search
   const filteredOrders = groupedOrders.filter(order => {
-    if (orderFilter === 'all') return true;
-    if (orderFilter === 'paid') return order.payment_status === 'paid';
-    if (orderFilter === 'pending') return order.payment_status === 'pending' || order.payment_status === 'reserved';
-    if (orderFilter === 'rejected') return order.payment_status === 'rejected';
-    return true;
+    // Status filter
+    const statusMatch = 
+      orderFilter === 'all' ? true :
+      orderFilter === 'paid' ? order.payment_status === 'paid' :
+      orderFilter === 'pending' ? (order.payment_status === 'pending' || order.payment_status === 'reserved') :
+      orderFilter === 'rejected' ? order.payment_status === 'rejected' : true;
+    
+    if (!statusMatch) return false;
+    
+    // Search filter
+    if (!searchQuery.trim()) return true;
+    
+    const query = searchQuery.toLowerCase().trim();
+    const nameMatch = order.buyer_name.toLowerCase().includes(query);
+    const cedulaMatch = order.buyer_cedula.toLowerCase().includes(query);
+    const phoneMatch = order.buyer_phone.toLowerCase().includes(query);
+    const numberMatch = order.numbers.some(n => 
+      formatNumber(n, selectedRaffleData?.number_count || 100).includes(query) ||
+      n.toString().includes(query)
+    );
+    
+    return nameMatch || cedulaMatch || phoneMatch || numberMatch;
   });
 
   if (loading) {
@@ -940,44 +959,76 @@ const Admin = () => {
               </CardContent>
             </Card>
 
-            {/* Order Filters */}
+            {/* Search and Filters */}
             {selectedRaffle && (
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  variant={orderFilter === 'all' ? 'default' : 'outline'}
-                  onClick={() => setOrderFilter('all')}
-                >
-                  <Filter className="w-4 h-4 mr-2" />
-                  Todos ({groupedOrders.length})
-                </Button>
-                <Button
-                  size="sm"
-                  variant={orderFilter === 'paid' ? 'default' : 'outline'}
-                  onClick={() => setOrderFilter('paid')}
-                  className={orderFilter === 'paid' ? '' : 'text-success border-success hover:bg-success hover:text-success-foreground'}
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Aprobados ({paidOrders.length})
-                </Button>
-                <Button
-                  size="sm"
-                  variant={orderFilter === 'pending' ? 'default' : 'outline'}
-                  onClick={() => setOrderFilter('pending')}
-                  className={orderFilter === 'pending' ? '' : 'text-warning border-warning hover:bg-warning hover:text-warning-foreground'}
-                >
-                  <Clock className="w-4 h-4 mr-2" />
-                  Pendientes ({pendingOrders.length})
-                </Button>
-                <Button
-                  size="sm"
-                  variant={orderFilter === 'rejected' ? 'default' : 'outline'}
-                  onClick={() => setOrderFilter('rejected')}
-                  className={orderFilter === 'rejected' ? '' : 'text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground'}
-                >
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Rechazados ({rejectedOrders.length})
-                </Button>
+              <div className="space-y-3">
+                {/* Search Input */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por número, nombre, cédula o teléfono..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 text-sm"
+                  />
+                  {searchQuery && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                      onClick={() => setSearchQuery('')}
+                    >
+                      <XCircle className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+
+                {/* Order Filters */}
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                  <Button
+                    size="sm"
+                    variant={orderFilter === 'all' ? 'default' : 'outline'}
+                    onClick={() => setOrderFilter('all')}
+                    className="text-xs sm:text-sm"
+                  >
+                    <Filter className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                    Todos ({groupedOrders.length})
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={orderFilter === 'paid' ? 'default' : 'outline'}
+                    onClick={() => setOrderFilter('paid')}
+                    className={`text-xs sm:text-sm ${orderFilter === 'paid' ? '' : 'text-success border-success hover:bg-success hover:text-success-foreground'}`}
+                  >
+                    <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Aprobados</span> ({paidOrders.length})
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={orderFilter === 'pending' ? 'default' : 'outline'}
+                    onClick={() => setOrderFilter('pending')}
+                    className={`text-xs sm:text-sm ${orderFilter === 'pending' ? '' : 'text-warning border-warning hover:bg-warning hover:text-warning-foreground'}`}
+                  >
+                    <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Pendientes</span> ({pendingOrders.length})
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={orderFilter === 'rejected' ? 'default' : 'outline'}
+                    onClick={() => setOrderFilter('rejected')}
+                    className={`text-xs sm:text-sm ${orderFilter === 'rejected' ? '' : 'text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground'}`}
+                  >
+                    <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Rechazados</span> ({rejectedOrders.length})
+                  </Button>
+                </div>
+
+                {/* Search results count */}
+                {searchQuery && (
+                  <p className="text-xs text-muted-foreground">
+                    {filteredOrders.length} resultado{filteredOrders.length !== 1 ? 's' : ''} para "{searchQuery}"
+                  </p>
+                )}
               </div>
             )}
 
