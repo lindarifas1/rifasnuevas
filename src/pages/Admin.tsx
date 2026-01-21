@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
-import { Raffle, Ticket } from '@/types/database';
+import { Raffle, Ticket, GroupedOrder } from '@/types/database';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -167,12 +167,12 @@ const Admin = () => {
     }
   };
 
-  const handleUpdateTicketStatus = async (ticketId: string, status: 'paid' | 'rejected' | 'pending') => {
+  const handleUpdateOrderStatus = async (ticketIds: string[], status: 'paid' | 'rejected' | 'pending') => {
     try {
       const { error } = await supabase
         .from('tickets')
         .update({ payment_status: status })
-        .eq('id', ticketId);
+        .in('id', ticketIds);
 
       if (error) throw error;
 
@@ -271,8 +271,40 @@ const Admin = () => {
   };
 
   const selectedRaffleData = raffles.find(r => r.id === selectedRaffle);
-  const paidTickets = tickets.filter(t => t.payment_status === 'paid');
-  const pendingTickets = tickets.filter(t => t.payment_status === 'pending' || t.payment_status === 'reserved');
+  
+  // Group tickets by order_id
+  const groupedOrders: GroupedOrder[] = tickets.reduce((acc, ticket) => {
+    // Use order_id if available, otherwise use a unique key based on buyer info and timestamp
+    const orderId = ticket.order_id || `${ticket.buyer_cedula}-${ticket.created_at}`;
+    
+    const existingOrder = acc.find(o => o.order_id === orderId);
+    
+    if (existingOrder) {
+      existingOrder.numbers.push(ticket.number);
+      existingOrder.total_amount += ticket.amount_paid;
+      existingOrder.ticket_ids.push(ticket.id);
+    } else {
+      acc.push({
+        order_id: orderId,
+        raffle_id: ticket.raffle_id,
+        numbers: [ticket.number],
+        buyer_name: ticket.buyer_name,
+        buyer_cedula: ticket.buyer_cedula,
+        buyer_phone: ticket.buyer_phone,
+        reference_number: ticket.reference_number,
+        payment_proof_url: ticket.payment_proof_url,
+        payment_status: ticket.payment_status,
+        total_amount: ticket.amount_paid,
+        created_at: ticket.created_at,
+        ticket_ids: [ticket.id],
+      });
+    }
+    
+    return acc;
+  }, [] as GroupedOrder[]);
+  
+  const paidOrders = groupedOrders.filter(o => o.payment_status === 'paid');
+  const pendingOrders = groupedOrders.filter(o => o.payment_status === 'pending' || o.payment_status === 'reserved');
 
   if (loading) {
     return (
@@ -535,7 +567,7 @@ const Admin = () => {
                   <CardContent className="py-4 text-center">
                     <DollarSign className="w-8 h-8 mx-auto text-success mb-2" />
                     <p className="text-2xl font-bold text-success">
-                      ${paidTickets.reduce((sum, t) => sum + t.amount_paid, 0)}
+                      ${paidOrders.reduce((sum, o) => sum + o.total_amount, 0)}
                     </p>
                     <p className="text-sm text-muted-foreground">Recaudado</p>
                   </CardContent>
@@ -543,14 +575,14 @@ const Admin = () => {
                 <Card>
                   <CardContent className="py-4 text-center">
                     <CheckCircle className="w-8 h-8 mx-auto text-success mb-2" />
-                    <p className="text-2xl font-bold">{paidTickets.length}</p>
-                    <p className="text-sm text-muted-foreground">Pagados</p>
+                    <p className="text-2xl font-bold">{paidOrders.length}</p>
+                    <p className="text-sm text-muted-foreground">Pedidos Pagados</p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="py-4 text-center">
                     <Clock className="w-8 h-8 mx-auto text-warning mb-2" />
-                    <p className="text-2xl font-bold">{pendingTickets.length}</p>
+                    <p className="text-2xl font-bold">{pendingOrders.length}</p>
                     <p className="text-sm text-muted-foreground">Pendientes</p>
                   </CardContent>
                 </Card>
@@ -558,7 +590,7 @@ const Admin = () => {
             )}
 
             {/* Orders List */}
-            {tickets.length === 0 ? (
+            {groupedOrders.length === 0 ? (
               <Card>
                 <CardContent className="py-10 text-center">
                   <Users className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
@@ -567,65 +599,72 @@ const Admin = () => {
               </Card>
             ) : (
               <div className="space-y-3">
-                {tickets.map((ticket) => (
-                  <Card key={ticket.id} className="overflow-hidden">
+                {groupedOrders.map((order) => (
+                  <Card key={order.order_id} className="overflow-hidden">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="px-3 py-1 bg-primary text-primary-foreground font-bold rounded-full text-lg">
-                              {formatNumber(ticket.number, selectedRaffleData?.number_count || 100)}
-                            </span>
+                          <div className="flex flex-wrap items-center gap-2 mb-3">
+                            {order.numbers
+                              .sort((a, b) => a - b)
+                              .map((num) => (
+                                <span 
+                                  key={num} 
+                                  className="px-2 py-1 bg-primary text-primary-foreground font-bold rounded-full text-sm"
+                                >
+                                  {formatNumber(num, selectedRaffleData?.number_count || 100)}
+                                </span>
+                              ))}
                             <div className={`px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${
-                              ticket.payment_status === 'paid'
+                              order.payment_status === 'paid'
                                 ? 'bg-success/10 text-success'
-                                : ticket.payment_status === 'rejected'
+                                : order.payment_status === 'rejected'
                                 ? 'bg-destructive/10 text-destructive'
                                 : 'bg-warning/10 text-warning'
                             }`}>
-                              {ticket.payment_status === 'paid' && <CheckCircle className="w-3 h-3" />}
-                              {ticket.payment_status === 'rejected' && <XCircle className="w-3 h-3" />}
-                              {(ticket.payment_status === 'pending' || ticket.payment_status === 'reserved') && <Clock className="w-3 h-3" />}
-                              {ticket.payment_status === 'paid' ? 'Pagado' : 
-                               ticket.payment_status === 'rejected' ? 'Rechazado' :
-                               ticket.payment_status === 'reserved' ? 'Reservado' : 'Pendiente'}
+                              {order.payment_status === 'paid' && <CheckCircle className="w-3 h-3" />}
+                              {order.payment_status === 'rejected' && <XCircle className="w-3 h-3" />}
+                              {(order.payment_status === 'pending' || order.payment_status === 'reserved') && <Clock className="w-3 h-3" />}
+                              {order.payment_status === 'paid' ? 'Pagado' : 
+                               order.payment_status === 'rejected' ? 'Rechazado' :
+                               order.payment_status === 'reserved' ? 'Reservado' : 'Pendiente'}
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-2 text-sm mb-3">
                             <div>
                               <span className="text-muted-foreground">Nombre:</span>
-                              <p className="font-medium">{ticket.buyer_name}</p>
+                              <p className="font-medium">{order.buyer_name}</p>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Cédula:</span>
-                              <p className="font-medium">{ticket.buyer_cedula}</p>
+                              <p className="font-medium">{order.buyer_cedula}</p>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Teléfono:</span>
-                              <p className="font-medium">{ticket.buyer_phone}</p>
+                              <p className="font-medium">{order.buyer_phone}</p>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Referencia:</span>
-                              <p className="font-medium">{ticket.reference_number || 'N/A'}</p>
+                              <p className="font-medium">{order.reference_number || 'N/A'}</p>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">Monto:</span>
-                              <p className="font-bold text-primary">${ticket.amount_paid}</p>
+                              <span className="text-muted-foreground">Monto Total:</span>
+                              <p className="font-bold text-primary">${order.total_amount.toFixed(2)}</p>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Fecha:</span>
                               <p className="font-medium">
-                                {format(new Date(ticket.created_at), 'dd/MM/yyyy HH:mm')}
+                                {format(new Date(order.created_at), 'dd/MM/yyyy HH:mm')}
                               </p>
                             </div>
                           </div>
-                          {ticket.payment_proof_url && (
+                          {order.payment_proof_url && (
                             <Button
                               variant="outline"
                               size="sm"
-                              className="inline-flex items-center gap-1 text-sm"
+                              className="inline-flex items-center gap-2"
                               onClick={() => {
-                                setSelectedProofUrl(ticket.payment_proof_url);
+                                setSelectedProofUrl(order.payment_proof_url);
                                 setProofDialogOpen(true);
                               }}
                             >
@@ -639,8 +678,8 @@ const Admin = () => {
                             size="sm"
                             variant="outline"
                             className="text-success border-success hover:bg-success hover:text-success-foreground"
-                            onClick={() => handleUpdateTicketStatus(ticket.id, 'paid')}
-                            disabled={ticket.payment_status === 'paid'}
+                            onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'paid')}
+                            disabled={order.payment_status === 'paid'}
                           >
                             <CheckCircle className="w-4 h-4" />
                           </Button>
@@ -648,8 +687,8 @@ const Admin = () => {
                             size="sm"
                             variant="outline"
                             className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
-                            onClick={() => handleUpdateTicketStatus(ticket.id, 'rejected')}
-                            disabled={ticket.payment_status === 'rejected'}
+                            onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'rejected')}
+                            disabled={order.payment_status === 'rejected'}
                           >
                             <XCircle className="w-4 h-4" />
                           </Button>
