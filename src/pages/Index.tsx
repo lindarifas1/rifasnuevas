@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { Header } from '@/components/Header';
 import { RaffleCard } from '@/components/RaffleCard';
 import { supabase } from '@/integrations/supabase/client';
-import { Raffle } from '@/types/database';
+import { Raffle, Ticket } from '@/types/database';
 import { Loader2, Trophy, Sparkles } from 'lucide-react';
 import heroBanner from '@/assets/hero-banner.jpg';
 
 const Index = () => {
   const [raffles, setRaffles] = useState<Raffle[]>([]);
+  const [ticketCounts, setTicketCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [coverImage, setCoverImage] = useState<string>(heroBanner);
   const isAdmin = localStorage.getItem('isAdmin') === 'true';
@@ -19,14 +20,34 @@ const Index = () => {
 
   const fetchRaffles = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: rafflesData, error: rafflesError } = await supabase
         .from('raffles')
         .select('*')
         .eq('status', 'active')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setRaffles(data as Raffle[] || []);
+      if (rafflesError) throw rafflesError;
+      setRaffles(rafflesData as Raffle[] || []);
+
+      // Fetch ticket counts for each raffle
+      if (rafflesData && rafflesData.length > 0) {
+        const raffleIds = rafflesData.map(r => r.id);
+        const { data: ticketsData, error: ticketsError } = await supabase
+          .from('tickets')
+          .select('raffle_id, payment_status')
+          .in('raffle_id', raffleIds);
+
+        if (ticketsError) throw ticketsError;
+
+        // Count sold tickets per raffle (paid, pending, reserved)
+        const counts: Record<string, number> = {};
+        (ticketsData as Ticket[] || []).forEach(ticket => {
+          if (ticket.payment_status === 'paid' || ticket.payment_status === 'pending' || ticket.payment_status === 'reserved') {
+            counts[ticket.raffle_id] = (counts[ticket.raffle_id] || 0) + 1;
+          }
+        });
+        setTicketCounts(counts);
+      }
     } catch (error) {
       console.error('Error fetching raffles:', error);
     } finally {
@@ -103,7 +124,11 @@ const Index = () => {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {raffles.map((raffle) => (
-              <RaffleCard key={raffle.id} raffle={raffle} />
+              <RaffleCard 
+                key={raffle.id} 
+                raffle={raffle} 
+                soldCount={ticketCounts[raffle.id] || 0}
+              />
             ))}
           </div>
         )}

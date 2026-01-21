@@ -36,9 +36,12 @@ const Admin = () => {
   const navigate = useNavigate();
   const [raffles, setRaffles] = useState<Raffle[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [allTickets, setAllTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRaffle, setSelectedRaffle] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingRaffle, setEditingRaffle] = useState<Raffle | null>(null);
   const [coverDialogOpen, setCoverDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [proofDialogOpen, setProofDialogOpen] = useState(false);
@@ -62,6 +65,7 @@ const Admin = () => {
       return;
     }
     fetchRaffles();
+    fetchAllTickets();
     fetchSiteSettings();
   }, [navigate]);
 
@@ -103,6 +107,19 @@ const Admin = () => {
       setTickets(data as Ticket[] || []);
     } catch (error) {
       console.error('Error:', error);
+    }
+  };
+
+  const fetchAllTickets = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('raffle_id, payment_status');
+
+      if (error) throw error;
+      setAllTickets(data as Ticket[] || []);
+    } catch (error) {
+      console.error('Error fetching all tickets:', error);
     }
   };
 
@@ -262,6 +279,45 @@ const Admin = () => {
       console.error('Error:', error);
       toast.error('Error al actualizar estado');
     }
+  };
+
+  const handleEditRaffle = (raffle: Raffle) => {
+    setEditingRaffle({ ...raffle });
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateRaffle = async () => {
+    if (!editingRaffle) return;
+    
+    try {
+      const { error } = await supabase
+        .from('raffles')
+        .update({
+          title: editingRaffle.title,
+          description: editingRaffle.description,
+          cover_image: editingRaffle.cover_image,
+          price: editingRaffle.price,
+          raffle_date: editingRaffle.raffle_date,
+          number_count: editingRaffle.number_count,
+          status: editingRaffle.status,
+        })
+        .eq('id', editingRaffle.id);
+
+      if (error) throw error;
+
+      toast.success('Rifa actualizada');
+      setEditDialogOpen(false);
+      setEditingRaffle(null);
+      fetchRaffles();
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Error al actualizar la rifa');
+    }
+  };
+
+  // Calculate sold numbers for each raffle using allTickets
+  const getRaffleSoldCount = (raffleId: string) => {
+    return allTickets.filter(t => t.raffle_id === raffleId && (t.payment_status === 'paid' || t.payment_status === 'reserved' || t.payment_status === 'pending')).length;
   };
 
   const formatNumber = (num: number, count: number) => {
@@ -466,6 +522,103 @@ const Admin = () => {
                 </div>
               </DialogContent>
             </Dialog>
+
+            {/* Edit Raffle Dialog */}
+            <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Editar Rifa</DialogTitle>
+                </DialogHeader>
+                {editingRaffle && (
+                  <div className="space-y-4 pt-4 max-h-[70vh] overflow-y-auto">
+                    <div className="space-y-2">
+                      <Label>Título *</Label>
+                      <Input
+                        value={editingRaffle.title}
+                        onChange={(e) => setEditingRaffle({ ...editingRaffle, title: e.target.value })}
+                        placeholder="Ej: iPhone 15 Pro Max"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Descripción</Label>
+                      <Textarea
+                        value={editingRaffle.description}
+                        onChange={(e) => setEditingRaffle({ ...editingRaffle, description: e.target.value })}
+                        placeholder="Descripción del premio..."
+                        rows={4}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>URL de Imagen</Label>
+                      <Input
+                        value={editingRaffle.cover_image}
+                        onChange={(e) => setEditingRaffle({ ...editingRaffle, cover_image: e.target.value })}
+                        placeholder="https://ejemplo.com/imagen.jpg"
+                      />
+                      {editingRaffle.cover_image && (
+                        <img
+                          src={editingRaffle.cover_image}
+                          alt="Preview"
+                          className="w-full h-32 object-cover rounded-lg mt-2"
+                        />
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Precio *</Label>
+                        <Input
+                          type="number"
+                          value={editingRaffle.price}
+                          onChange={(e) => setEditingRaffle({ ...editingRaffle, price: parseFloat(e.target.value) || 0 })}
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Cantidad de Números</Label>
+                        <Select
+                          value={editingRaffle.number_count.toString()}
+                          onValueChange={(value) => setEditingRaffle({ ...editingRaffle, number_count: parseInt(value) })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="100">100 (00-99)</SelectItem>
+                            <SelectItem value="1000">1000 (000-999)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Fecha del Sorteo *</Label>
+                      <Input
+                        type="date"
+                        value={editingRaffle.raffle_date}
+                        onChange={(e) => setEditingRaffle({ ...editingRaffle, raffle_date: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Estado</Label>
+                      <Select
+                        value={editingRaffle.status}
+                        onValueChange={(value: 'active' | 'finished') => setEditingRaffle({ ...editingRaffle, status: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Activa</SelectItem>
+                          <SelectItem value="finished">Finalizada</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button onClick={handleUpdateRaffle} className="w-full" variant="gold">
+                      Guardar Cambios
+                    </Button>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
@@ -491,47 +644,85 @@ const Admin = () => {
               </Card>
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
-                {raffles.map((raffle) => (
-                  <Card key={raffle.id} className="overflow-hidden">
-                    <div className="relative h-32">
-                      <img
-                        src={raffle.cover_image || '/placeholder.svg'}
-                        alt={raffle.title}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-semibold ${
-                        raffle.status === 'active' 
-                          ? 'bg-success text-success-foreground' 
-                          : 'bg-muted text-muted-foreground'
-                      }`}>
-                        {raffle.status === 'active' ? 'Activa' : 'Finalizada'}
+                {raffles.map((raffle) => {
+                  const soldCount = getRaffleSoldCount(raffle.id);
+                  const progressPercent = (soldCount / raffle.number_count) * 100;
+                  const availableCount = raffle.number_count - soldCount;
+                  
+                  return (
+                    <Card key={raffle.id} className="overflow-hidden">
+                      <div className="relative h-40">
+                        <img
+                          src={raffle.cover_image || '/placeholder.svg'}
+                          alt={raffle.title}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-semibold ${
+                          raffle.status === 'active' 
+                            ? 'bg-success text-success-foreground' 
+                            : 'bg-muted text-muted-foreground'
+                        }`}>
+                          {raffle.status === 'active' ? 'Activa' : 'Finalizada'}
+                        </div>
                       </div>
-                    </div>
-                    <CardContent className="p-4">
-                      <h3 className="font-bold mb-2">{raffle.title}</h3>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-                        <span>${raffle.price}/número</span>
-                        <span>{raffle.number_count} números</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant={raffle.status === 'active' ? 'outline' : 'default'}
-                          onClick={() => handleToggleRaffleStatus(raffle)}
-                        >
-                          {raffle.status === 'active' ? 'Finalizar' : 'Activar'}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleDeleteRaffle(raffle.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      <CardContent className="p-4 space-y-3">
+                        <h3 className="font-bold text-lg">{raffle.title}</h3>
+                        {raffle.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-3">
+                            {raffle.description}
+                          </p>
+                        )}
+                        
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span>${raffle.price}/número</span>
+                          <span>{raffle.number_count} números</span>
+                        </div>
+                        
+                        {/* Progress bar */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span className="text-success font-medium">{soldCount} vendidos</span>
+                            <span>{availableCount} disponibles</span>
+                          </div>
+                          <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-success transition-all duration-300"
+                              style={{ width: `${progressPercent}%` }}
+                            />
+                          </div>
+                          <p className="text-xs text-center text-muted-foreground">
+                            {progressPercent.toFixed(1)}% vendido
+                          </p>
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditRaffle(raffle)}
+                          >
+                            <Edit className="w-4 h-4 mr-1" />
+                            Editar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={raffle.status === 'active' ? 'outline' : 'default'}
+                            onClick={() => handleToggleRaffleStatus(raffle)}
+                          >
+                            {raffle.status === 'active' ? 'Finalizar' : 'Activar'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeleteRaffle(raffle.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </TabsContent>
