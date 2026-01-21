@@ -1,10 +1,5 @@
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
 import { Settings, Trophy, LogOut } from 'lucide-react';
 
 interface HeaderProps {
@@ -13,27 +8,16 @@ interface HeaderProps {
 }
 
 export const Header = ({ isAdmin, onLogout }: HeaderProps) => {
-  const [open, setOpen] = useState(false);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
   const handleLogin = () => {
-    if (username === 'leonardy' && password === 'Mkgothicp') {
-      localStorage.setItem('isAdmin', 'true');
-      setOpen(false);
-      toast.success('¡Bienvenido Administrador!');
-      navigate('/admin');
-    } else {
-      toast.error('Credenciales incorrectas');
-    }
+    navigate('/admin/login');
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('isAdmin');
-    if (onLogout) onLogout();
-    toast.success('Sesión cerrada');
-    navigate('/');
+    if (onLogout) {
+      onLogout();
+    }
   };
 
   return (
@@ -69,43 +53,14 @@ export const Header = ({ isAdmin, onLogout }: HeaderProps) => {
               </Button>
             </>
           ) : (
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="opacity-50 hover:opacity-100">
-                  <Settings className="w-4 h-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Acceso Administrativo</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 pt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="username">Usuario</Label>
-                    <Input
-                      id="username"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Usuario"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Contraseña</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Contraseña"
-                      onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                    />
-                  </div>
-                  <Button onClick={handleLogin} className="w-full" variant="gold">
-                    Iniciar Sesión
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="opacity-50 hover:opacity-100"
+              onClick={handleLogin}
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
           )}
         </div>
       </div>
