@@ -62,7 +62,9 @@ export const PurchaseForm = ({
     }
 
     // Check max numbers per client limit
-    if (raffle.max_numbers_per_client) {
+    console.log('Checking limit - max_numbers_per_client:', raffle.max_numbers_per_client, 'type:', typeof raffle.max_numbers_per_client);
+    
+    if (raffle.max_numbers_per_client !== null && raffle.max_numbers_per_client !== undefined && raffle.max_numbers_per_client > 0) {
       const { data: existingTickets, error: countError } = await supabase
         .from('tickets')
         .select('id')
@@ -75,6 +77,8 @@ export const PurchaseForm = ({
       } else {
         const currentCount = existingTickets?.length || 0;
         const totalAfterPurchase = currentCount + selectedNumbers.length;
+        
+        console.log('Limit check - currentCount:', currentCount, 'selected:', selectedNumbers.length, 'total:', totalAfterPurchase, 'max:', raffle.max_numbers_per_client);
 
         if (totalAfterPurchase > raffle.max_numbers_per_client) {
           setExistingCount(currentCount);
