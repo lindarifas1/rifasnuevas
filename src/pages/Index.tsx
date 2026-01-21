@@ -6,15 +6,16 @@ import { VerifyNumbersGlobal } from '@/components/VerifyNumbersGlobal';
 import { supabase } from '@/integrations/supabase/client';
 import { Raffle, Ticket } from '@/types/database';
 import { Loader2, Trophy, MessageCircle } from 'lucide-react';
-import heroBanner from '@/assets/hero-banner.jpg';
 import { Button } from '@/components/ui/button';
 
 const Index = () => {
   const [raffles, setRaffles] = useState<Raffle[]>([]);
   const [ticketCounts, setTicketCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
-  const [coverImage, setCoverImage] = useState<string>(heroBanner);
-  const [appName, setAppName] = useState('RifaMax');
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [coverImage, setCoverImage] = useState<string>('');
+  const [logoUrl, setLogoUrl] = useState<string>('');
+  const [appName, setAppName] = useState('');
   const [adminWhatsapp, setAdminWhatsapp] = useState('');
   const isAdmin = localStorage.getItem('isAdmin') === 'true';
 
@@ -69,27 +70,40 @@ const Index = () => {
 
       if (error && error.code !== 'PGRST116') throw error;
       if (data) {
-        setCoverImage(data.cover_image || heroBanner);
-        setAppName(data.app_name || 'RifaMax');
+        setCoverImage(data.cover_image || '');
+        setAppName(data.app_name || '');
         setAdminWhatsapp(data.admin_whatsapp || '');
+        setLogoUrl(data.logo_url || '');
       }
     } catch (error) {
       console.error('Error fetching site settings:', error);
+    } finally {
+      setSettingsLoading(false);
     }
   };
 
+  if (settingsLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <Header isAdmin={isAdmin} appName={appName} adminWhatsapp={adminWhatsapp} />
+      <Header isAdmin={isAdmin} appName={appName} adminWhatsapp={adminWhatsapp} logoUrl={logoUrl} />
       
       {/* Hero Section - Full image without cropping */}
-      <section className="bg-black">
-        <img
-          src={coverImage}
-          alt="Portada"
-          className="w-full h-auto max-h-[60vh] object-contain mx-auto"
-        />
-      </section>
+      {coverImage && (
+        <section className="bg-black">
+          <img
+            src={coverImage}
+            alt="Portada"
+            className="w-full h-auto max-h-[60vh] object-contain mx-auto"
+          />
+        </section>
+      )}
 
       {/* Raffles Section */}
       <section className="container py-8">
