@@ -658,20 +658,6 @@ const Admin = () => {
                               </p>
                             </div>
                           </div>
-                          {order.payment_proof_url && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="inline-flex items-center gap-2"
-                              onClick={() => {
-                                setSelectedProofUrl(order.payment_proof_url);
-                                setProofDialogOpen(true);
-                              }}
-                            >
-                              <Eye className="w-4 h-4" />
-                              Ver Comprobante
-                            </Button>
-                          )}
                         </div>
                         <div className="flex flex-col gap-2">
                           <Button
@@ -692,6 +678,19 @@ const Admin = () => {
                           >
                             <XCircle className="w-4 h-4" />
                           </Button>
+                          {order.payment_proof_url && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-secondary border-secondary hover:bg-secondary hover:text-secondary-foreground"
+                              onClick={() => {
+                                setSelectedProofUrl(order.payment_proof_url);
+                                setProofDialogOpen(true);
+                              }}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </CardContent>
