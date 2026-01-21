@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ import { WhatsAppMessageMenu } from '@/components/WhatsAppMessageMenu';
 import { AdminOrderTicket } from '@/components/AdminOrderTicket';
 import { DeleteRaffleDialog } from '@/components/DeleteRaffleDialog';
 import { PaymentMethodsManager } from '@/components/PaymentMethodsManager';
+import { useNewTicketNotification } from '@/hooks/useNewTicketNotification';
 import {
   Plus,
   Trash2,
@@ -40,9 +41,19 @@ import {
   ChevronUp,
   Search,
   Ticket as TicketIcon,
+  Undo2,
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { User, Session } from '@supabase/supabase-js';
+
+interface UndoAction {
+  order_id: string;
+  ticket_ids: string[];
+  previous_status: 'paid' | 'pending' | 'rejected' | 'reserved';
+  current_status: 'paid' | 'rejected';
+  buyer_name: string;
+  timestamp: number;
+}
 
 interface ApprovalHistoryItem {
   order_id: string;
@@ -96,6 +107,7 @@ const Admin = () => {
     numbers: '',
     paymentStatus: 'paid' as 'paid' | 'pending' | 'reserved',
   });
+  const [undoActions, setUndoActions] = useState<UndoAction[]>([]);
   const [newRaffle, setNewRaffle] = useState({
     title: '',
     description: '',
@@ -104,6 +116,19 @@ const Admin = () => {
     raffle_date: '',
     number_count: 100,
     status: 'active' as const,
+  });
+
+  // Realtime notification hook
+  const handleNewTicket = useCallback(() => {
+    if (selectedRaffle) {
+      fetchTickets(selectedRaffle);
+      fetchAllTickets();
+    }
+  }, [selectedRaffle]);
+
+  useNewTicketNotification({
+    raffleId: selectedRaffle,
+    onNewTicket: handleNewTicket,
   });
 
   // Auth check
@@ -361,8 +386,26 @@ const Admin = () => {
     }
   };
 
-  const handleUpdateOrderStatus = async (ticketIds: string[], status: 'paid' | 'rejected' | 'pending', order?: GroupedOrder) => {
+  const handleUpdateOrderStatus = async (
+    ticketIds: string[], 
+    status: 'paid' | 'rejected' | 'pending', 
+    order?: GroupedOrder,
+    skipUndo = false
+  ) => {
     try {
+      // Save undo action before changing status
+      if (!skipUndo && order && (status === 'paid' || status === 'rejected')) {
+        const undoAction: UndoAction = {
+          order_id: order.order_id,
+          ticket_ids: ticketIds,
+          previous_status: order.payment_status as 'paid' | 'pending' | 'rejected' | 'reserved',
+          current_status: status,
+          buyer_name: order.buyer_name,
+          timestamp: Date.now(),
+        };
+        setUndoActions(prev => [undoAction, ...prev].slice(0, 10)); // Keep last 10 undo actions
+      }
+
       const { error } = await supabase
         .from('tickets')
         .update({ payment_status: status })
@@ -385,6 +428,26 @@ const Admin = () => {
     } catch (error) {
       console.error('Error:', error);
       toast.error('Error al actualizar');
+    }
+  };
+
+  const handleUndoAction = async (undoAction: UndoAction) => {
+    try {
+      const { error } = await supabase
+        .from('tickets')
+        .update({ payment_status: undoAction.previous_status })
+        .in('id', undoAction.ticket_ids);
+
+      if (error) throw error;
+
+      // Remove from undo actions
+      setUndoActions(prev => prev.filter(a => a.order_id !== undoAction.order_id));
+      
+      toast.success(`Acción deshecha: ${undoAction.buyer_name} volvió a "${undoAction.previous_status}"`);
+      if (selectedRaffle) fetchTickets(selectedRaffle);
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Error al deshacer la acción');
     }
   };
 
@@ -1430,6 +1493,25 @@ const Admin = () => {
 
                       {/* Action buttons - horizontal scroll on mobile */}
                       <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1">
+                        {/* Check if this order has an undo action available */}
+                        {(() => {
+                          const undoAction = undoActions.find(a => a.order_id === order.order_id);
+                          if (undoAction) {
+                            return (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-amber-600 border-amber-500 hover:bg-amber-500 hover:text-white text-xs px-2 sm:px-3 shrink-0"
+                                onClick={() => handleUndoAction(undoAction)}
+                              >
+                                <Undo2 className="w-3.5 h-3.5 sm:mr-1" />
+                                <span className="hidden sm:inline">Deshacer</span>
+                              </Button>
+                            );
+                          }
+                          return null;
+                        })()}
+                        
                         {/* Show delete button for rejected orders */}
                         {order.payment_status === 'rejected' ? (
                           <Button
@@ -1457,7 +1539,7 @@ const Admin = () => {
                               size="sm"
                               variant="outline"
                               className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground text-xs px-2 sm:px-3 shrink-0"
-                              onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'rejected')}
+                              onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'rejected', order)}
                             >
                               <XCircle className="w-3.5 h-3.5 sm:mr-1" />
                               <span className="hidden sm:inline">Rechazar</span>
