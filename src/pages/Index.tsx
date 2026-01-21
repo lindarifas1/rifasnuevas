@@ -3,7 +3,7 @@ import { Header } from '@/components/Header';
 import { RaffleCard } from '@/components/RaffleCard';
 import { supabase } from '@/integrations/supabase/client';
 import { Raffle, Ticket } from '@/types/database';
-import { Loader2, Trophy, Sparkles } from 'lucide-react';
+import { Loader2, Trophy } from 'lucide-react';
 import heroBanner from '@/assets/hero-banner.jpg';
 
 const Index = () => {
@@ -75,29 +75,13 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Header isAdmin={isAdmin} />
       
-      {/* Hero Section */}
-      <section className="relative h-[50vh] min-h-[300px] overflow-hidden">
+      {/* Hero Section - Full image without cropping */}
+      <section className="bg-black">
         <img
           src={coverImage}
           alt="Portada"
-          className="w-full h-full object-cover"
+          className="w-full h-auto max-h-[60vh] object-contain mx-auto"
         />
-        <div className="absolute inset-0 gradient-hero opacity-80" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="w-6 h-6 text-primary animate-pulse" />
-            <span className="text-primary font-semibold uppercase tracking-wider text-sm">
-              ¡Participa y Gana!
-            </span>
-            <Sparkles className="w-6 h-6 text-primary animate-pulse" />
-          </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-card mb-4">
-            Rifas <span className="text-gradient-gold">Exclusivas</span>
-          </h1>
-          <p className="text-card/80 max-w-md text-lg">
-            Los mejores premios te esperan. Selecciona tu número de la suerte y participa hoy.
-          </p>
-        </div>
       </section>
 
       {/* Raffles Section */}
