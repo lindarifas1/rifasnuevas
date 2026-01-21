@@ -7,9 +7,10 @@ interface HeaderProps {
   onLogout?: () => void;
   appName?: string;
   adminWhatsapp?: string;
+  logoUrl?: string;
 }
 
-export const Header = ({ isAdmin, onLogout, appName = 'RifaMax', adminWhatsapp }: HeaderProps) => {
+export const Header = ({ isAdmin, onLogout, appName, adminWhatsapp, logoUrl }: HeaderProps) => {
   const navigate = useNavigate();
 
   const handleLogin = () => {
@@ -36,10 +37,14 @@ export const Header = ({ isAdmin, onLogout, appName = 'RifaMax', adminWhatsapp }
           className="flex items-center gap-2 cursor-pointer" 
           onClick={() => navigate('/')}
         >
-          <div className="w-10 h-10 rounded-xl gradient-gold flex items-center justify-center shadow-gold">
-            <Trophy className="w-6 h-6 text-primary-foreground" />
-          </div>
-          <span className="text-xl font-bold">{appName}</span>
+          {logoUrl ? (
+            <img src={logoUrl} alt={appName || 'Logo'} className="w-10 h-10 rounded-xl object-cover" />
+          ) : (
+            <div className="w-10 h-10 rounded-xl gradient-gold flex items-center justify-center shadow-gold">
+              <Trophy className="w-6 h-6 text-primary-foreground" />
+            </div>
+          )}
+          {appName && <span className="text-xl font-bold">{appName}</span>}
         </div>
 
         <div className="flex items-center gap-2">

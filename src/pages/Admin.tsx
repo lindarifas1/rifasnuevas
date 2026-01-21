@@ -86,7 +86,8 @@ const Admin = () => {
   const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
   const [siteCover, setSiteCover] = useState('');
   const [adminWhatsapp, setAdminWhatsapp] = useState('');
-  const [appName, setAppName] = useState('RifaMax');
+  const [appName, setAppName] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
   const [termsConditions, setTermsConditions] = useState('');
   const [termsDialogOpen, setTermsDialogOpen] = useState(false);
   const [orderFilter, setOrderFilter] = useState<'all' | 'paid' | 'pending' | 'rejected'>('all');
@@ -293,8 +294,9 @@ const Admin = () => {
       if (data) {
         setSiteCover(data.cover_image || '');
         setAdminWhatsapp(data.admin_whatsapp || '');
-        setAppName(data.app_name || 'RifaMax');
+        setAppName(data.app_name || '');
         setTermsConditions(data.terms_conditions || '');
+        setLogoUrl(data.logo_url || '');
       }
     } catch (error) {
       console.error('Error:', error);
@@ -310,7 +312,8 @@ const Admin = () => {
 
       const settingsData = { 
         app_name: appName, 
-        terms_conditions: termsConditions 
+        terms_conditions: termsConditions,
+        logo_url: logoUrl
       };
 
       if (existing) {
@@ -780,7 +783,7 @@ const Admin = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header isAdmin onLogout={handleLogout} appName={appName} adminWhatsapp={adminWhatsapp} />
+        <Header isAdmin onLogout={handleLogout} appName={appName} adminWhatsapp={adminWhatsapp} logoUrl={logoUrl} />
         <div className="flex items-center justify-center h-[60vh]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
@@ -790,7 +793,7 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header isAdmin onLogout={handleLogout} appName={appName} adminWhatsapp={adminWhatsapp} />
+      <Header isAdmin onLogout={handleLogout} appName={appName} adminWhatsapp={adminWhatsapp} logoUrl={logoUrl} />
 
       <div className="container py-4 px-3 sm:py-6 sm:px-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
@@ -815,6 +818,24 @@ const Admin = () => {
                       onChange={(e) => setAppName(e.target.value)}
                       placeholder="Ej: RifaMax"
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>URL del Logo</Label>
+                    <Input
+                      value={logoUrl}
+                      onChange={(e) => setLogoUrl(e.target.value)}
+                      placeholder="https://ejemplo.com/logo.png"
+                    />
+                    {logoUrl && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <img
+                          src={logoUrl}
+                          alt="Preview logo"
+                          className="w-10 h-10 rounded-xl object-cover"
+                        />
+                        <span className="text-xs text-muted-foreground">Vista previa</span>
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label>Términos y Condiciones</Label>
