@@ -388,6 +388,23 @@ const Admin = () => {
     }
   };
 
+  const handleDeleteOrder = async (ticketIds: string[]) => {
+    try {
+      const { error } = await supabase
+        .from('tickets')
+        .delete()
+        .in('id', ticketIds);
+
+      if (error) throw error;
+
+      toast.success('Pedido eliminado');
+      if (selectedRaffle) fetchTickets(selectedRaffle);
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Error al eliminar el pedido');
+    }
+  };
+
   const handleUpdateSiteCover = async () => {
     try {
       const { data: existing } = await supabase
@@ -610,6 +627,9 @@ const Admin = () => {
 
   const selectedRaffleData = raffles.find(r => r.id === selectedRaffle);
   
+  // Get the selected raffle price for debt calculation
+  const rafflePrice = selectedRaffleData?.price || 0;
+
   // Group tickets by order_id
   const groupedOrders: GroupedOrder[] = tickets.reduce((acc, ticket) => {
     // Use order_id if available, otherwise use a unique key based on buyer info and timestamp
@@ -619,9 +639,13 @@ const Admin = () => {
     
     if (existingOrder) {
       existingOrder.numbers.push(ticket.number);
-      existingOrder.total_amount += ticket.amount_paid;
+      existingOrder.amount_paid += ticket.amount_paid;
+      existingOrder.total_amount += rafflePrice;
+      existingOrder.debt = existingOrder.total_amount - existingOrder.amount_paid;
       existingOrder.ticket_ids.push(ticket.id);
     } else {
+      const expectedTotal = rafflePrice;
+      const amountPaid = ticket.amount_paid;
       acc.push({
         order_id: orderId,
         raffle_id: ticket.raffle_id,
@@ -632,7 +656,9 @@ const Admin = () => {
         reference_number: ticket.reference_number,
         payment_proof_url: ticket.payment_proof_url,
         payment_status: ticket.payment_status,
-        total_amount: ticket.amount_paid,
+        total_amount: expectedTotal,
+        amount_paid: amountPaid,
+        debt: expectedTotal - amountPaid,
         created_at: ticket.created_at,
         ticket_ids: [ticket.id],
       });
@@ -1376,10 +1402,6 @@ const Admin = () => {
                           <span className="text-muted-foreground">Ref: </span>
                           <span className="font-medium text-[11px] sm:text-sm">{order.reference_number || 'N/A'}</span>
                         </div>
-                        <div>
-                          <span className="text-muted-foreground">Monto: </span>
-                          <span className="font-bold text-primary">${order.total_amount.toFixed(2)}</span>
-                        </div>
                         <div className="truncate">
                           <span className="text-muted-foreground">Fecha: </span>
                           <span className="font-medium text-[11px] sm:text-sm">
@@ -1388,28 +1410,60 @@ const Admin = () => {
                         </div>
                       </div>
 
+                      {/* Payment amounts - Total, Paid, Debt */}
+                      <div className="grid grid-cols-3 gap-2 mb-2 sm:mb-3 p-2 bg-muted/50 rounded-lg">
+                        <div className="text-center">
+                          <span className="text-muted-foreground text-[10px] sm:text-xs block">Total</span>
+                          <span className="font-bold text-xs sm:text-sm">${order.total_amount.toFixed(2)}</span>
+                        </div>
+                        <div className="text-center">
+                          <span className="text-muted-foreground text-[10px] sm:text-xs block">Pagado</span>
+                          <span className="font-bold text-success text-xs sm:text-sm">${order.amount_paid.toFixed(2)}</span>
+                        </div>
+                        <div className="text-center">
+                          <span className="text-muted-foreground text-[10px] sm:text-xs block">Deuda</span>
+                          <span className={`font-bold text-xs sm:text-sm ${order.debt > 0 ? 'text-destructive' : 'text-success'}`}>
+                            ${order.debt.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+
                       {/* Action buttons - horizontal scroll on mobile */}
                       <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-success border-success hover:bg-success hover:text-success-foreground text-xs px-2 sm:px-3 shrink-0"
-                          onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'paid', order)}
-                          disabled={order.payment_status === 'paid'}
-                        >
-                          <CheckCircle className="w-3.5 h-3.5 sm:mr-1" />
-                          <span className="hidden sm:inline">Aprobar</span>
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground text-xs px-2 sm:px-3 shrink-0"
-                          onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'rejected')}
-                          disabled={order.payment_status === 'rejected'}
-                        >
-                          <XCircle className="w-3.5 h-3.5 sm:mr-1" />
-                          <span className="hidden sm:inline">Rechazar</span>
-                        </Button>
+                        {/* Show delete button for rejected orders */}
+                        {order.payment_status === 'rejected' ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground text-xs px-2 sm:px-3 shrink-0"
+                            onClick={() => handleDeleteOrder(order.ticket_ids)}
+                          >
+                            <Trash2 className="w-3.5 h-3.5 sm:mr-1" />
+                            <span className="hidden sm:inline">Eliminar</span>
+                          </Button>
+                        ) : (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-success border-success hover:bg-success hover:text-success-foreground text-xs px-2 sm:px-3 shrink-0"
+                              onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'paid', order)}
+                              disabled={order.payment_status === 'paid'}
+                            >
+                              <CheckCircle className="w-3.5 h-3.5 sm:mr-1" />
+                              <span className="hidden sm:inline">Aprobar</span>
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground text-xs px-2 sm:px-3 shrink-0"
+                              onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'rejected')}
+                            >
+                              <XCircle className="w-3.5 h-3.5 sm:mr-1" />
+                              <span className="hidden sm:inline">Rechazar</span>
+                            </Button>
+                          </>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
