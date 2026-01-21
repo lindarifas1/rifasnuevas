@@ -45,5 +45,7 @@ export interface SiteSettings {
   id: string;
   cover_image: string;
   admin_whatsapp: string;
+  app_name: string;
+  terms_conditions: string;
   updated_at: string;
 }
