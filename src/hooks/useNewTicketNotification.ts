@@ -8,8 +8,9 @@ interface UseNewTicketNotificationOptions {
 }
 
 export const useNewTicketNotification = ({ raffleId, onNewTicket }: UseNewTicketNotificationOptions) => {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const processedOrdersRef = useRef<Set<string>>(new Set());
+  const pendingOrderRef = useRef<{ orderId: string; buyerName: string; numbers: number[]; timeout: NodeJS.Timeout } | null>(null);
 
   // Create a simple beep sound using Web Audio API
   const playNotificationSound = useCallback(() => {
@@ -34,6 +35,22 @@ export const useNewTicketNotification = ({ raffleId, onNewTicket }: UseNewTicket
     }
   }, []);
 
+  const showOrderNotification = useCallback((buyerName: string, numbers: number[]) => {
+    playNotificationSound();
+    
+    const sortedNumbers = numbers.sort((a, b) => a - b);
+    const numbersText = sortedNumbers.length === 1 
+      ? `Número: ${sortedNumbers[0]}`
+      : `Números: ${sortedNumbers.join(', ')}`;
+    
+    toast.info(`🎟️ Nuevo pedido de ${buyerName}`, {
+      description: numbersText,
+      duration: 5000,
+    });
+    
+    onNewTicket();
+  }, [playNotificationSound, onNewTicket]);
+
   useEffect(() => {
     if (!raffleId) return;
 
@@ -51,18 +68,41 @@ export const useNewTicketNotification = ({ raffleId, onNewTicket }: UseNewTicket
         (payload) => {
           console.log('New ticket received:', payload);
           
-          // Play notification sound
-          playNotificationSound();
-          
-          // Show toast notification
           const newTicket = payload.new as any;
-          toast.info(`🎟️ Nuevo pedido de ${newTicket.buyer_name}`, {
-            description: `Número: ${newTicket.number}`,
-            duration: 5000,
-          });
+          const orderId = newTicket.order_id;
           
-          // Trigger refresh
-          onNewTicket();
+          // Skip if we've already fully processed this order
+          if (processedOrdersRef.current.has(orderId)) {
+            return;
+          }
+          
+          // If there's a pending order with the same ID, add the number to it
+          if (pendingOrderRef.current && pendingOrderRef.current.orderId === orderId) {
+            pendingOrderRef.current.numbers.push(newTicket.number);
+          } else {
+            // Clear any existing pending order (different order_id)
+            if (pendingOrderRef.current) {
+              clearTimeout(pendingOrderRef.current.timeout);
+              processedOrdersRef.current.add(pendingOrderRef.current.orderId);
+              showOrderNotification(pendingOrderRef.current.buyerName, pendingOrderRef.current.numbers);
+            }
+            
+            // Create new pending order
+            const timeout = setTimeout(() => {
+              if (pendingOrderRef.current && pendingOrderRef.current.orderId === orderId) {
+                processedOrdersRef.current.add(orderId);
+                showOrderNotification(pendingOrderRef.current.buyerName, pendingOrderRef.current.numbers);
+                pendingOrderRef.current = null;
+              }
+            }, 500); // Wait 500ms to collect all numbers from the same order
+            
+            pendingOrderRef.current = {
+              orderId,
+              buyerName: newTicket.buyer_name,
+              numbers: [newTicket.number],
+              timeout,
+            };
+          }
         }
       )
       .subscribe();
@@ -70,11 +110,14 @@ export const useNewTicketNotification = ({ raffleId, onNewTicket }: UseNewTicket
     channelRef.current = channel;
 
     return () => {
+      if (pendingOrderRef.current) {
+        clearTimeout(pendingOrderRef.current.timeout);
+      }
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
       }
     };
-  }, [raffleId, onNewTicket, playNotificationSound]);
+  }, [raffleId, showOrderNotification]);
 
   return {
     playNotificationSound,

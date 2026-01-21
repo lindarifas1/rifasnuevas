@@ -1469,7 +1469,6 @@ const Admin = () => {
                       <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
                         {order.numbers
                           .sort((a, b) => a - b)
-                          .slice(0, 6)
                           .map((num) => (
                             <span 
                               key={num} 
@@ -1478,9 +1477,6 @@ const Admin = () => {
                               {formatNumber(num, selectedRaffleData?.number_count || 100)}
                             </span>
                           ))}
-                        {order.numbers.length > 6 && (
-                          <span className="text-xs text-muted-foreground">+{order.numbers.length - 6}</span>
-                        )}
                         <div className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold flex items-center gap-0.5 sm:gap-1 ml-auto ${
                           order.payment_status === 'paid'
                             ? 'bg-success/10 text-success'
