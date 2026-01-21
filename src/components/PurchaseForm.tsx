@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Upload, CreditCard, Wallet } from 'lucide-react';
+import { Loader2, Upload, CreditCard, Wallet, MessageCircle, AlertTriangle } from 'lucide-react';
 import { Raffle } from '@/types/database';
 import { PurchaseTicket } from './PurchaseTicket';
 import { PaymentMethodsDisplay } from './PaymentMethodsDisplay';
@@ -16,6 +16,7 @@ interface PurchaseFormProps {
   selectedNumbers: number[];
   onSuccess: () => void;
   onCancel: () => void;
+  adminWhatsapp?: string;
 }
 
 export const PurchaseForm = ({
@@ -23,9 +24,12 @@ export const PurchaseForm = ({
   selectedNumbers,
   onSuccess,
   onCancel,
+  adminWhatsapp,
 }: PurchaseFormProps) => {
   const [loading, setLoading] = useState(false);
   const [showTicket, setShowTicket] = useState(false);
+  const [showLimitError, setShowLimitError] = useState(false);
+  const [existingCount, setExistingCount] = useState(0);
   const [formData, setFormData] = useState({
     name: '',
     cedula: '',
@@ -55,6 +59,29 @@ export const PurchaseForm = ({
     if (formData.paymentType !== 'reserve' && !formData.referenceNumber) {
       toast.error('Por favor ingrese el número de referencia del pago');
       return;
+    }
+
+    // Check max numbers per client limit
+    if (raffle.max_numbers_per_client) {
+      const { data: existingTickets, error: countError } = await supabase
+        .from('tickets')
+        .select('id')
+        .eq('raffle_id', raffle.id)
+        .eq('buyer_cedula', formData.cedula)
+        .neq('payment_status', 'rejected');
+
+      if (countError) {
+        console.error('Error checking existing tickets:', countError);
+      } else {
+        const currentCount = existingTickets?.length || 0;
+        const totalAfterPurchase = currentCount + selectedNumbers.length;
+
+        if (totalAfterPurchase > raffle.max_numbers_per_client) {
+          setExistingCount(currentCount);
+          setShowLimitError(true);
+          return;
+        }
+      }
     }
 
     setLoading(true);
@@ -149,6 +176,16 @@ export const PurchaseForm = ({
     return num.toString().padStart(3, '0');
   };
 
+  const openWhatsApp = () => {
+    if (adminWhatsapp) {
+      const cleanPhone = adminWhatsapp.replace(/[^0-9]/g, '');
+      const message = encodeURIComponent(
+        `Hola, necesito ayuda para comprar números en la rifa "${raffle.title}". Ya tengo ${existingCount} números y quiero agregar ${selectedNumbers.length} más, pero el límite es ${raffle.max_numbers_per_client}.`
+      );
+      window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
+    }
+  };
+
   if (showTicket) {
     return (
       <PurchaseTicket
@@ -162,6 +199,51 @@ export const PurchaseForm = ({
         amountPaid={getAmountPaid()}
         onClose={handleCloseTicket}
       />
+    );
+  }
+
+  if (showLimitError) {
+    return (
+      <Card className="w-full max-w-lg mx-auto">
+        <CardHeader className="bg-destructive/10 text-destructive rounded-t-lg">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5" />
+            Límite Alcanzado
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6 space-y-4 text-center">
+          <p className="text-muted-foreground">
+            Esta rifa tiene un límite de <strong>{raffle.max_numbers_per_client}</strong> números por cliente.
+          </p>
+          <p className="text-muted-foreground">
+            Ya tienes <strong>{existingCount}</strong> número(s) registrado(s) con esta cédula.
+          </p>
+          <p className="text-muted-foreground">
+            No puedes agregar <strong>{selectedNumbers.length}</strong> número(s) más.
+          </p>
+          
+          <div className="pt-4 space-y-3">
+            <p className="font-medium">Para comprar más números, contacta al administrador:</p>
+            {adminWhatsapp ? (
+              <Button 
+                onClick={openWhatsApp}
+                className="bg-[#25D366] hover:bg-[#128C7E] text-white gap-2"
+              >
+                <MessageCircle className="w-5 h-5" />
+                Contactar por WhatsApp
+              </Button>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Contacta al administrador de la rifa para asistencia.
+              </p>
+            )}
+          </div>
+          
+          <Button variant="outline" onClick={onCancel} className="mt-4">
+            Volver
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 

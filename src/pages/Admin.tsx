@@ -115,6 +115,7 @@ const Admin = () => {
     price: 0,
     raffle_date: '',
     number_count: 100,
+    max_numbers_per_client: null as number | null,
     status: 'active' as const,
   });
 
@@ -355,6 +356,7 @@ const Admin = () => {
         price: 0,
         raffle_date: '',
         number_count: 100,
+        max_numbers_per_client: null,
         status: 'active',
       });
       fetchRaffles();
@@ -565,6 +567,7 @@ const Admin = () => {
           price: editingRaffle.price,
           raffle_date: editingRaffle.raffle_date,
           number_count: editingRaffle.number_count,
+          max_numbers_per_client: editingRaffle.max_numbers_per_client,
           status: editingRaffle.status,
         })
         .eq('id', editingRaffle.id);
@@ -970,6 +973,20 @@ const Admin = () => {
                       onChange={(e) => setNewRaffle({ ...newRaffle, raffle_date: e.target.value })}
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Máx. Números por Cliente</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={newRaffle.max_numbers_per_client ?? ''}
+                      onChange={(e) => setNewRaffle({ 
+                        ...newRaffle, 
+                        max_numbers_per_client: e.target.value ? parseInt(e.target.value) : null 
+                      })}
+                      placeholder="Sin límite"
+                    />
+                    <p className="text-xs text-muted-foreground">Dejar vacío para sin límite</p>
+                  </div>
                   <Button onClick={handleCreateRaffle} className="w-full" variant="gold">
                     Crear Rifa
                   </Button>
@@ -1050,6 +1067,20 @@ const Admin = () => {
                         value={editingRaffle.raffle_date}
                         onChange={(e) => setEditingRaffle({ ...editingRaffle, raffle_date: e.target.value })}
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Máx. Números por Cliente</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={editingRaffle.max_numbers_per_client ?? ''}
+                        onChange={(e) => setEditingRaffle({ 
+                          ...editingRaffle, 
+                          max_numbers_per_client: e.target.value ? parseInt(e.target.value) : null 
+                        })}
+                        placeholder="Sin límite"
+                      />
+                      <p className="text-xs text-muted-foreground">Dejar vacío para sin límite</p>
                     </div>
                     <div className="space-y-2">
                       <Label>Estado</Label>

@@ -1,14 +1,15 @@
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { Settings, Trophy, LogOut } from 'lucide-react';
+import { Settings, Trophy, LogOut, MessageCircle } from 'lucide-react';
 
 interface HeaderProps {
   isAdmin?: boolean;
   onLogout?: () => void;
   appName?: string;
+  adminWhatsapp?: string;
 }
 
-export const Header = ({ isAdmin, onLogout, appName = 'RifaMax' }: HeaderProps) => {
+export const Header = ({ isAdmin, onLogout, appName = 'RifaMax', adminWhatsapp }: HeaderProps) => {
   const navigate = useNavigate();
 
   const handleLogin = () => {
@@ -18,6 +19,13 @@ export const Header = ({ isAdmin, onLogout, appName = 'RifaMax' }: HeaderProps) 
   const handleLogout = () => {
     if (onLogout) {
       onLogout();
+    }
+  };
+
+  const openWhatsApp = () => {
+    if (adminWhatsapp) {
+      const cleanPhone = adminWhatsapp.replace(/[^0-9]/g, '');
+      window.open(`https://wa.me/${cleanPhone}`, '_blank');
     }
   };
 
@@ -35,6 +43,17 @@ export const Header = ({ isAdmin, onLogout, appName = 'RifaMax' }: HeaderProps) 
         </div>
 
         <div className="flex items-center gap-2">
+          {adminWhatsapp && (
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={openWhatsApp}
+              className="bg-[#25D366] hover:bg-[#128C7E] text-white gap-1"
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span className="hidden sm:inline">WhatsApp</span>
+            </Button>
+          )}
           {isAdmin ? (
             <>
               <Button 

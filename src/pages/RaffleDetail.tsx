@@ -27,14 +27,32 @@ const RaffleDetail = () => {
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPurchaseForm, setShowPurchaseForm] = useState(false);
+  const [adminWhatsapp, setAdminWhatsapp] = useState('');
   const isAdmin = localStorage.getItem('isAdmin') === 'true';
 
   useEffect(() => {
     if (id) {
       fetchRaffle();
       fetchTickets();
+      fetchSiteSettings();
     }
   }, [id]);
+
+  const fetchSiteSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('site_settings')
+        .select('admin_whatsapp')
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      if (data) {
+        setAdminWhatsapp(data.admin_whatsapp || '');
+      }
+    } catch (error) {
+      console.error('Error fetching site settings:', error);
+    }
+  };
 
   const fetchRaffle = async () => {
     try {
@@ -181,6 +199,7 @@ const RaffleDetail = () => {
             selectedNumbers={selectedNumbers}
             onSuccess={handlePurchaseSuccess}
             onCancel={() => setShowPurchaseForm(false)}
+            adminWhatsapp={adminWhatsapp}
           />
         ) : (
           <>
