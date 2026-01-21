@@ -678,19 +678,20 @@ const Admin = () => {
                           >
                             <XCircle className="w-4 h-4" />
                           </Button>
-                          {order.payment_proof_url && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-secondary border-secondary hover:bg-secondary hover:text-secondary-foreground"
-                              onClick={() => {
-                                setSelectedProofUrl(order.payment_proof_url);
-                                setProofDialogOpen(true);
-                              }}
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full"
+                            disabled={!order.payment_proof_url}
+                            onClick={() => {
+                              if (!order.payment_proof_url) return;
+                              setSelectedProofUrl(order.payment_proof_url);
+                              setProofDialogOpen(true);
+                            }}
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            Ver comprobante
+                          </Button>
                         </div>
                       </div>
                     </CardContent>
