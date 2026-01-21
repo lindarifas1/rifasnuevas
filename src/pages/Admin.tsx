@@ -14,6 +14,7 @@ import { Raffle, Ticket, GroupedOrder } from '@/types/database';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { WhatsAppMessageMenu } from '@/components/WhatsAppMessageMenu';
 import {
   Plus,
   Trash2,
@@ -667,7 +668,8 @@ const Admin = () => {
                             onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'paid')}
                             disabled={order.payment_status === 'paid'}
                           >
-                            <CheckCircle className="w-4 h-4" />
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Aprobar
                           </Button>
                           <Button
                             size="sm"
@@ -676,7 +678,8 @@ const Admin = () => {
                             onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'rejected')}
                             disabled={order.payment_status === 'rejected'}
                           >
-                            <XCircle className="w-4 h-4" />
+                            <XCircle className="w-4 h-4 mr-2" />
+                            Rechazar
                           </Button>
                           <Button
                             size="sm"
@@ -692,6 +695,14 @@ const Admin = () => {
                             <Eye className="w-4 h-4 mr-2" />
                             Ver comprobante
                           </Button>
+                          <WhatsAppMessageMenu
+                            buyerPhone={order.buyer_phone}
+                            buyerName={order.buyer_name}
+                            numbers={order.numbers}
+                            totalAmount={order.total_amount}
+                            raffleName={selectedRaffleData?.title}
+                            formatNumber={(num) => formatNumber(num, selectedRaffleData?.number_count || 100)}
+                          />
                         </div>
                       </div>
                     </CardContent>
