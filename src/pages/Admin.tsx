@@ -40,6 +40,8 @@ const Admin = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [coverDialogOpen, setCoverDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+  const [proofDialogOpen, setProofDialogOpen] = useState(false);
+  const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
   const [siteCover, setSiteCover] = useState('');
   const [adminWhatsapp, setAdminWhatsapp] = useState('');
   const [newRaffle, setNewRaffle] = useState({
@@ -618,15 +620,18 @@ const Admin = () => {
                             </div>
                           </div>
                           {ticket.payment_proof_url && (
-                            <a
-                              href={ticket.payment_proof_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-sm text-secondary hover:underline"
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="inline-flex items-center gap-1 text-sm"
+                              onClick={() => {
+                                setSelectedProofUrl(ticket.payment_proof_url);
+                                setProofDialogOpen(true);
+                              }}
                             >
                               <Eye className="w-4 h-4" />
                               Ver Comprobante
-                            </a>
+                            </Button>
                           )}
                         </div>
                         <div className="flex flex-col gap-2">
@@ -657,6 +662,26 @@ const Admin = () => {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Payment Proof Dialog */}
+        <Dialog open={proofDialogOpen} onOpenChange={setProofDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Comprobante de Pago</DialogTitle>
+            </DialogHeader>
+            <div className="mt-4">
+              {selectedProofUrl ? (
+                <img
+                  src={selectedProofUrl}
+                  alt="Comprobante de pago"
+                  className="w-full max-h-[70vh] object-contain rounded-lg"
+                />
+              ) : (
+                <p className="text-center text-muted-foreground">No hay comprobante disponible</p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
