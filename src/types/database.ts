@@ -50,11 +50,18 @@ export interface SiteSettings {
   updated_at: string;
 }
 
+// Payment field for structured payment data
+export interface PaymentField {
+  label: string;
+  value: string;
+}
+
 export interface PaymentMethod {
   id: string;
   name: string;
   image_url: string | null;
   details: string;
+  payment_fields: PaymentField[] | null;
   is_active: boolean;
   display_order: number;
   created_at: string;
