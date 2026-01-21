@@ -95,9 +95,13 @@ export const PurchaseForm = ({
         amountPaid = totalPrice;
       }
 
-      // Create tickets for each selected number
+      // Generate a unique order_id to group all numbers from this purchase
+      const orderId = `${Date.now()}-${formData.cedula}-${Math.random().toString(36).substring(2, 9)}`;
+
+      // Create tickets for each selected number with the same order_id
       const tickets = selectedNumbers.map(number => ({
         raffle_id: raffle.id,
+        order_id: orderId,
         number,
         buyer_name: formData.name,
         buyer_cedula: formData.cedula,
