@@ -15,6 +15,8 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { WhatsAppMessageMenu } from '@/components/WhatsAppMessageMenu';
+import { AdminOrderTicket } from '@/components/AdminOrderTicket';
+import { DeleteRaffleDialog } from '@/components/DeleteRaffleDialog';
 import {
   Plus,
   Trash2,
@@ -36,6 +38,7 @@ import {
   ChevronDown,
   ChevronUp,
   Search,
+  Ticket as TicketIcon,
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { User, Session } from '@supabase/supabase-js';
@@ -79,6 +82,9 @@ const Admin = () => {
   const [approvedOrder, setApprovedOrder] = useState<GroupedOrder | null>(null);
   const [approvalHistory, setApprovalHistory] = useState<ApprovalHistoryItem[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [ticketDialogOrder, setTicketDialogOrder] = useState<GroupedOrder | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [raffleToDelete, setRaffleToDelete] = useState<Raffle | null>(null);
   const [newClient, setNewClient] = useState({
     name: '',
     cedula: '',
@@ -292,15 +298,21 @@ const Admin = () => {
     }
   };
 
-  const handleDeleteRaffle = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar esta rifa?')) return;
+  const handleOpenDeleteDialog = (raffle: Raffle) => {
+    setRaffleToDelete(raffle);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteRaffle = async () => {
+    if (!raffleToDelete) return;
 
     try {
-      const { error } = await supabase.from('raffles').delete().eq('id', id);
+      const { error } = await supabase.from('raffles').delete().eq('id', raffleToDelete.id);
 
       if (error) throw error;
 
       toast.success('Rifa eliminada');
+      setRaffleToDelete(null);
       fetchRaffles();
     } catch (error) {
       console.error('Error:', error);
@@ -985,7 +997,7 @@ const Admin = () => {
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => handleDeleteRaffle(raffle.id)}
+                            onClick={() => handleOpenDeleteDialog(raffle)}
                             className="px-2 sm:px-3"
                           >
                             <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -1336,6 +1348,15 @@ const Admin = () => {
                           raffleName={selectedRaffleData?.title}
                           formatNumber={(num) => formatNumber(num, selectedRaffleData?.number_count || 100)}
                         />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs px-2 sm:px-3 shrink-0"
+                          onClick={() => setTicketDialogOrder(order)}
+                        >
+                          <TicketIcon className="w-3.5 h-3.5 sm:mr-1" />
+                          <span className="hidden sm:inline">Ticket</span>
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -1508,6 +1529,28 @@ const Admin = () => {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Order Ticket Dialog */}
+        {ticketDialogOrder && selectedRaffleData && (
+          <AdminOrderTicket
+            order={ticketDialogOrder}
+            raffle={selectedRaffleData}
+            isOpen={!!ticketDialogOrder}
+            onClose={() => setTicketDialogOrder(null)}
+            formatNumber={(num) => formatNumber(num, selectedRaffleData.number_count)}
+          />
+        )}
+
+        {/* Delete Raffle Confirmation Dialog */}
+        <DeleteRaffleDialog
+          isOpen={deleteDialogOpen}
+          onClose={() => {
+            setDeleteDialogOpen(false);
+            setRaffleToDelete(null);
+          }}
+          onConfirm={handleDeleteRaffle}
+          raffleName={raffleToDelete?.title || ''}
+        />
       </div>
     </div>
   );
