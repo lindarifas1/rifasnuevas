@@ -3,7 +3,10 @@ import { cn } from '@/lib/utils';
 import { Ticket } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Shuffle, X } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Shuffle, X, ZoomIn, ZoomOut, Eye } from 'lucide-react';
 
 interface NumberGridProps {
   numberCount: number;
@@ -21,6 +24,8 @@ export const NumberGrid = ({
   onClearSelection,
 }: NumberGridProps) => {
   const [randomCount, setRandomCount] = useState<string>('1');
+  const [zoomLevel, setZoomLevel] = useState<number>(50);
+  const [showOnlyAvailable, setShowOnlyAvailable] = useState<boolean>(false);
 
   const occupiedNumbers = useMemo(() => {
     return new Set(
@@ -51,7 +56,6 @@ export const NumberGrid = ({
     const count = parseInt(randomCount) || 0;
     if (count <= 0) return;
 
-    // Clear previous selection first, then select new random numbers
     onClearSelection();
     
     const availableNumbers: number[] = [];
@@ -64,10 +68,27 @@ export const NumberGrid = ({
     const actualCount = Math.min(count, availableNumbers.length);
     const shuffled = availableNumbers.sort(() => Math.random() - 0.5);
     
-    // Use setTimeout to ensure state is cleared before adding new numbers
     setTimeout(() => {
       shuffled.slice(0, actualCount).forEach(num => onSelectNumber(num));
     }, 0);
+  };
+
+  // Calculate grid size based on zoom level (20-100)
+  const getGridStyles = () => {
+    // Base size ranges from 24px (zoom=0) to 56px (zoom=100)
+    const minSize = 24;
+    const maxSize = 56;
+    const cellSize = minSize + ((maxSize - minSize) * zoomLevel) / 100;
+    
+    // Font size ranges from 8px to 16px
+    const minFont = 8;
+    const maxFont = 16;
+    const fontSize = minFont + ((maxFont - minFont) * zoomLevel) / 100;
+
+    return {
+      gridTemplateColumns: `repeat(auto-fill, minmax(${cellSize}px, 1fr))`,
+      '--cell-font-size': `${fontSize}px`,
+    } as React.CSSProperties;
   };
 
   const statusColors = {
@@ -76,6 +97,20 @@ export const NumberGrid = ({
     paid: 'bg-muted text-muted-foreground border-muted cursor-not-allowed opacity-60',
     reserved: 'bg-warning/20 text-warning border-warning/50 cursor-not-allowed',
   };
+
+  // Filter numbers based on showOnlyAvailable
+  const numbersToShow = useMemo(() => {
+    const allNumbers = Array.from({ length: numberCount }, (_, i) => i);
+    if (showOnlyAvailable) {
+      return allNumbers.filter(num => {
+        const status = getNumberStatus(num);
+        return status === 'available' || status === 'selected';
+      });
+    }
+    return allNumbers;
+  }, [numberCount, showOnlyAvailable, tickets, selectedNumbers]);
+
+  const availableCount = numberCount - occupiedNumbers.size;
 
   return (
     <div className="space-y-4">
@@ -95,6 +130,37 @@ export const NumberGrid = ({
         <Button size="sm" variant="secondary" onClick={handleRandomSelection}>
           Generar
         </Button>
+      </div>
+
+      {/* Zoom and Filter Controls */}
+      <div className="flex flex-col sm:flex-row gap-3 p-3 bg-card rounded-lg border shadow-sm">
+        {/* Zoom Control */}
+        <div className="flex items-center gap-3 flex-1">
+          <ZoomOut className="w-4 h-4 text-muted-foreground" />
+          <Slider
+            value={[zoomLevel]}
+            onValueChange={(value) => setZoomLevel(value[0])}
+            min={0}
+            max={100}
+            step={5}
+            className="flex-1"
+          />
+          <ZoomIn className="w-4 h-4 text-muted-foreground" />
+        </div>
+
+        {/* Show Only Available Filter */}
+        <div className="flex items-center gap-2 sm:border-l sm:pl-3">
+          <Switch
+            id="show-available"
+            checked={showOnlyAvailable}
+            onCheckedChange={setShowOnlyAvailable}
+          />
+          <Label htmlFor="show-available" className="text-sm cursor-pointer flex items-center gap-1.5">
+            <Eye className="w-4 h-4" />
+            Solo disponibles
+            <span className="text-xs text-muted-foreground">({availableCount})</span>
+          </Label>
+        </div>
       </div>
 
       {/* Selected Numbers Summary */}
@@ -131,24 +197,26 @@ export const NumberGrid = ({
           <div className="w-4 h-4 rounded bg-primary border border-primary" />
           <span>Seleccionado</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-4 h-4 rounded bg-warning/20 border border-warning/50" />
-          <span>Reservado</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-4 h-4 rounded bg-muted border border-muted opacity-60" />
-          <span>Vendido</span>
-        </div>
+        {!showOnlyAvailable && (
+          <>
+            <div className="flex items-center gap-1.5">
+              <div className="w-4 h-4 rounded bg-warning/20 border border-warning/50" />
+              <span>Reservado</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-4 h-4 rounded bg-muted border border-muted opacity-60" />
+              <span>Vendido</span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Number Grid */}
       <div 
-        className={cn(
-          "grid gap-1.5 p-2",
-          numberCount <= 100 ? "grid-cols-10" : "grid-cols-10 sm:grid-cols-20"
-        )}
+        className="grid gap-1.5 p-2"
+        style={getGridStyles()}
       >
-        {Array.from({ length: numberCount }, (_, i) => {
+        {numbersToShow.map((i) => {
           const status = getNumberStatus(i);
           const isDisabled = status === 'paid' || status === 'reserved';
 
@@ -158,15 +226,22 @@ export const NumberGrid = ({
               disabled={isDisabled}
               onClick={() => !isDisabled && onSelectNumber(i)}
               className={cn(
-                "number-grid-item aspect-square flex items-center justify-center text-xs sm:text-sm font-semibold rounded-md border-2 transition-all",
+                "aspect-square flex items-center justify-center font-semibold rounded-md border-2 transition-all",
                 statusColors[status]
               )}
+              style={{ fontSize: 'var(--cell-font-size)' }}
             >
               {formatNumber(i)}
             </button>
           );
         })}
       </div>
+
+      {showOnlyAvailable && numbersToShow.length === 0 && (
+        <div className="text-center py-8 text-muted-foreground">
+          No hay números disponibles
+        </div>
+      )}
     </div>
   );
 };
