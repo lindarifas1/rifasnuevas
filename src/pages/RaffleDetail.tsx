@@ -215,10 +215,6 @@ const RaffleDetail = () => {
           </div>
         </div>
 
-        {/* Verify Numbers */}
-        <div className="mb-6">
-          <VerifyNumbers raffleId={raffle.id} numberCount={raffle.number_count} />
-        </div>
 
         {/* Number Grid or Purchase Form */}
         {showPurchaseForm ? (

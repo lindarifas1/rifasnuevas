@@ -348,9 +348,9 @@ export const PurchaseForm = ({
                 type="number"
                 min={1}
                 max={totalPrice}
-                value={formData.partialAmount}
+                value={formData.partialAmount || ''}
                 onChange={(e) => setFormData({ ...formData, partialAmount: parseFloat(e.target.value) || 0 })}
-                placeholder="Monto"
+                placeholder="Ingrese el monto"
               />
             </div>
           )}
