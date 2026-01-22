@@ -42,7 +42,9 @@ import {
   Search,
   Ticket as TicketIcon,
   Undo2,
+  UsersRound,
 } from 'lucide-react';
+import { ClientsSection } from '@/components/ClientsSection';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { User, Session } from '@supabase/supabase-js';
 
@@ -1183,7 +1185,7 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="raffles" className="space-y-4">
-          <TabsList className="grid grid-cols-2 w-full max-w-md">
+          <TabsList className="grid grid-cols-3 w-full max-w-lg">
             <TabsTrigger value="raffles">
               <Trophy className="w-4 h-4 mr-2" />
               Rifas
@@ -1191,6 +1193,10 @@ const Admin = () => {
             <TabsTrigger value="orders">
               <Users className="w-4 h-4 mr-2" />
               Pedidos
+            </TabsTrigger>
+            <TabsTrigger value="clients">
+              <UsersRound className="w-4 h-4 mr-2" />
+              Clientes
             </TabsTrigger>
           </TabsList>
 
@@ -1685,6 +1691,10 @@ const Admin = () => {
                 ))}
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="clients">
+            <ClientsSection raffles={raffles} adminWhatsapp={adminWhatsapp} />
           </TabsContent>
         </Tabs>
 
