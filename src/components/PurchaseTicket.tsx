@@ -174,7 +174,7 @@ ${referenceNumber ? `• Referencia: ${referenceNumber}` : ''}
             </div>
 
             {/* Numbers */}
-            <div className="bg-muted p-3 rounded-lg">
+            <div className="p-3">
               <p className="text-sm text-muted-foreground mb-2">Números adquiridos:</p>
               <div className="flex flex-wrap gap-2">
                 {selectedNumbers.map(num => (
@@ -228,7 +228,7 @@ ${referenceNumber ? `• Referencia: ${referenceNumber}` : ''}
             </p>
 
             {/* WhatsApp instruction */}
-            <p className="text-center font-bold text-primary text-sm mt-2">
+            <p className="text-center font-bold text-foreground text-sm mt-2">
               Descarga el ticket y presiona WhatsApp
             </p>
           </CardContent>
