@@ -46,6 +46,19 @@ export interface GroupedOrder {
   ticket_ids: string[];
 }
 
+// Client type for clients section
+export interface Client {
+  cedula: string;
+  name: string;
+  phone: string;
+  total_tickets: number;
+  total_paid: number;
+  total_debt: number;
+  total_raffles: number;
+  last_purchase: string;
+  tickets: Ticket[];
+}
+
 export interface SiteSettings {
   id: string;
   cover_image: string;
