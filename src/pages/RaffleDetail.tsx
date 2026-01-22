@@ -125,7 +125,10 @@ const RaffleDetail = () => {
       );
       return;
     }
-    setShowPurchaseForm(true);
+    // Use setTimeout to ensure smooth transition on mobile Chrome
+    setTimeout(() => {
+      setShowPurchaseForm(true);
+    }, 10);
   };
 
   const handlePurchaseSuccess = () => {

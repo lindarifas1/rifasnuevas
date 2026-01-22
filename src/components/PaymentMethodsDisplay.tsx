@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PaymentMethod, PaymentField } from '@/types/database';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,7 +25,8 @@ const parsePaymentFields = (data: unknown): PaymentField[] | null => {
   return null;
 };
 
-export const PaymentMethodsDisplay = ({ compact = false }: PaymentMethodsDisplayProps) => {
+export const PaymentMethodsDisplay = forwardRef<HTMLDivElement, PaymentMethodsDisplayProps>(
+  ({ compact = false }, ref) => {
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [loading, setLoading] = useState(true);
@@ -157,4 +158,6 @@ export const PaymentMethodsDisplay = ({ compact = false }: PaymentMethodsDisplay
       </div>
     </section>
   );
-};
+});
+
+PaymentMethodsDisplay.displayName = 'PaymentMethodsDisplay';

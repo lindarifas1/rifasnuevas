@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, forwardRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,13 +19,13 @@ interface PurchaseFormProps {
   adminWhatsapp?: string;
 }
 
-export const PurchaseForm = ({
+export const PurchaseForm = forwardRef<HTMLDivElement, PurchaseFormProps>(({
   raffle,
   selectedNumbers,
   onSuccess,
   onCancel,
   adminWhatsapp,
-}: PurchaseFormProps) => {
+}, ref) => {
   const [loading, setLoading] = useState(false);
   const [showTicket, setShowTicket] = useState(false);
   const [showLimitError, setShowLimitError] = useState(false);
@@ -417,4 +417,6 @@ export const PurchaseForm = ({
       </CardContent>
     </Card>
   );
-};
+});
+
+PurchaseForm.displayName = 'PurchaseForm';

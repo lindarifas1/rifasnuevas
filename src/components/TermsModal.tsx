@@ -24,8 +24,11 @@ export const TermsModal = ({ open, onOpenChange, onAccept, termsContent }: Terms
 
   const handleAccept = () => {
     if (accepted) {
-      onAccept();
       setAccepted(false);
+      // Use setTimeout to ensure state updates before navigation
+      setTimeout(() => {
+        onAccept();
+      }, 50);
     }
   };
 
