@@ -97,24 +97,39 @@ export const PurchaseTicket = ({
     }
   };
 
+  const getActionText = () => {
+    switch (paymentType) {
+      case 'full':
+        return 'acabo de *COMPRAR*';
+      case 'partial':
+        return 'acabo de *ABONAR*';
+      case 'reserve':
+        return 'acabo de *APARTAR*';
+      default:
+        return 'realicé una compra de';
+    }
+  };
+
   const generateTicketText = () => {
-    return `
-🎟️ TICKET DE COMPRA - ${raffle.title}
+    const formattedNumbers = selectedNumbers.map(n => formatNumber(n)).join(', ');
+    return `¡Hola! 👋
 
-📋 Números: ${selectedNumbers.map(n => formatNumber(n)).join(', ')}
-💰 Total: $${totalPrice}
-📊 Estado: ${getPaymentStatusText()}
+${getActionText()} los números *${formattedNumbers}* en la rifa "${raffle.title}".
 
-👤 Nombre: ${buyerName}
-🪪 Cédula: ${buyerCedula}
-📱 Teléfono: ${buyerPhone}
-${referenceNumber ? `🔢 Referencia: ${referenceNumber}` : ''}
+📋 *Detalles de la compra:*
+• Números: ${formattedNumbers}
+• Total: $${totalPrice}
+• ${paymentType === 'partial' ? `Abonado: $${amountPaid}` : paymentType === 'reserve' ? 'Sin pago (Reservado)' : `Pagado: $${totalPrice}`}
+${referenceNumber ? `• Referencia: ${referenceNumber}` : ''}
+
+👤 *Mis datos:*
+• Nombre: ${buyerName}
+• Cédula: ${buyerCedula}
+• Teléfono: ${buyerPhone}
 
 📅 Fecha: ${format(new Date(), "dd 'de' MMMM, yyyy - HH:mm", { locale: es })}
-🎯 Sorteo: ${format(new Date(raffle.raffle_date), "dd 'de' MMMM, yyyy", { locale: es })}
 
-¡Gracias por tu compra! 🍀
-    `.trim();
+¡Quedo atento a la confirmación! 🍀`.trim();
   };
 
   const handleWhatsApp = () => {
