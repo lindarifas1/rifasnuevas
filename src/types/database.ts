@@ -9,6 +9,8 @@ export interface Raffle {
   max_numbers_per_client: number | null; // Limit per cedula, null = unlimited
   status: 'active' | 'finished';
   created_at: string;
+  cop_rate: number; // Exchange rate to Colombian Pesos
+  bs_rate: number; // Exchange rate to Venezuelan Bolívares
 }
 
 export interface Ticket {
