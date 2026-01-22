@@ -1,12 +1,13 @@
-import { useState, forwardRef } from 'react';
+import { useState, forwardRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Upload, CreditCard, Wallet, MessageCircle, AlertTriangle } from 'lucide-react';
+import { Loader2, Upload, CreditCard, Wallet, MessageCircle, AlertTriangle, DollarSign } from 'lucide-react';
 import { Raffle } from '@/types/database';
 import { PurchaseTicket } from './PurchaseTicket';
 import { PaymentMethodsDisplay } from './PaymentMethodsDisplay';
@@ -19,6 +20,8 @@ interface PurchaseFormProps {
   adminWhatsapp?: string;
 }
 
+type Currency = 'USD' | 'COP' | 'BS';
+
 export const PurchaseForm = forwardRef<HTMLDivElement, PurchaseFormProps>(({
   raffle,
   selectedNumbers,
@@ -30,6 +33,7 @@ export const PurchaseForm = forwardRef<HTMLDivElement, PurchaseFormProps>(({
   const [showTicket, setShowTicket] = useState(false);
   const [showLimitError, setShowLimitError] = useState(false);
   const [existingCount, setExistingCount] = useState(0);
+  const [selectedCurrency, setSelectedCurrency] = useState<Currency>('USD');
   const [formData, setFormData] = useState({
     name: '',
     cedula: '',
@@ -37,10 +41,73 @@ export const PurchaseForm = forwardRef<HTMLDivElement, PurchaseFormProps>(({
     referenceNumber: '',
     paymentType: 'full' as 'full' | 'partial' | 'reserve',
     partialAmount: 0,
+    partialAmountInCurrency: 0,
   });
   const [paymentProof, setPaymentProof] = useState<File | null>(null);
 
   const totalPrice = selectedNumbers.length * raffle.price;
+
+  // Calculate available currencies
+  const availableCurrencies = useMemo(() => {
+    const currencies: { value: Currency; label: string; symbol: string }[] = [
+      { value: 'USD', label: 'Dólares (USD)', symbol: '$' }
+    ];
+    if (raffle.cop_rate > 0) {
+      currencies.push({ value: 'COP', label: 'Pesos Colombianos (COP)', symbol: 'COP' });
+    }
+    if (raffle.bs_rate > 0) {
+      currencies.push({ value: 'BS', label: 'Bolívares (Bs)', symbol: 'Bs' });
+    }
+    return currencies;
+  }, [raffle.cop_rate, raffle.bs_rate]);
+
+  // Convert USD to selected currency
+  const convertFromUSD = (usdAmount: number): number => {
+    switch (selectedCurrency) {
+      case 'COP': return usdAmount * raffle.cop_rate;
+      case 'BS': return usdAmount * raffle.bs_rate;
+      default: return usdAmount;
+    }
+  };
+
+  // Convert selected currency to USD
+  const convertToUSD = (amount: number): number => {
+    switch (selectedCurrency) {
+      case 'COP': return raffle.cop_rate > 0 ? amount / raffle.cop_rate : 0;
+      case 'BS': return raffle.bs_rate > 0 ? amount / raffle.bs_rate : 0;
+      default: return amount;
+    }
+  };
+
+  // Get currency symbol
+  const getCurrencySymbol = (): string => {
+    return availableCurrencies.find(c => c.value === selectedCurrency)?.symbol || '$';
+  };
+
+  // Total in selected currency
+  const totalInCurrency = convertFromUSD(totalPrice);
+
+  // Handle partial amount change in selected currency
+  const handlePartialAmountChange = (value: string) => {
+    const amountInCurrency = parseFloat(value) || 0;
+    const amountInUSD = convertToUSD(amountInCurrency);
+    setFormData({ 
+      ...formData, 
+      partialAmountInCurrency: amountInCurrency,
+      partialAmount: amountInUSD 
+    });
+  };
+
+  // Update partial amount when currency changes
+  const handleCurrencyChange = (currency: Currency) => {
+    setSelectedCurrency(currency);
+    // Reset partial amount when currency changes
+    setFormData({
+      ...formData,
+      partialAmountInCurrency: 0,
+      partialAmount: 0
+    });
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -350,17 +417,75 @@ export const PurchaseForm = forwardRef<HTMLDivElement, PurchaseFormProps>(({
           </div>
 
           {formData.paymentType === 'partial' && (
+            <div className="space-y-3">
+              {availableCurrencies.length > 1 && (
+                <div className="space-y-2">
+                  <Label>Moneda de Pago</Label>
+                  <Select value={selectedCurrency} onValueChange={(v: Currency) => handleCurrencyChange(v)}>
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder="Selecciona moneda" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background z-50">
+                      {availableCurrencies.map((currency) => (
+                        <SelectItem key={currency.value} value={currency.value}>
+                          {currency.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="partialAmount">
+                  Monto del Abono ({getCurrencySymbol()})
+                </Label>
+                <Input
+                  id="partialAmount"
+                  type="number"
+                  min={1}
+                  max={totalInCurrency}
+                  value={formData.partialAmountInCurrency || ''}
+                  onChange={(e) => handlePartialAmountChange(e.target.value)}
+                  placeholder={`Ingrese el monto en ${getCurrencySymbol()}`}
+                />
+                {selectedCurrency !== 'USD' && formData.partialAmount > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Equivale a: ${formData.partialAmount.toFixed(2)} USD
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Total a pagar: {getCurrencySymbol()} {totalInCurrency.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {selectedCurrency !== 'USD' && ` (${totalPrice} USD)`}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {formData.paymentType === 'full' && availableCurrencies.length > 1 && (
             <div className="space-y-2">
-              <Label htmlFor="partialAmount">Monto del Abono</Label>
-              <Input
-                id="partialAmount"
-                type="number"
-                min={1}
-                max={totalPrice}
-                value={formData.partialAmount || ''}
-                onChange={(e) => setFormData({ ...formData, partialAmount: parseFloat(e.target.value) || 0 })}
-                placeholder="Ingrese el monto"
-              />
+              <Label>Moneda de Pago</Label>
+              <Select value={selectedCurrency} onValueChange={(v: Currency) => setSelectedCurrency(v)}>
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="Selecciona moneda" />
+                </SelectTrigger>
+                <SelectContent className="bg-background z-50">
+                  {availableCurrencies.map((currency) => (
+                    <SelectItem key={currency.value} value={currency.value}>
+                      {currency.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="p-3 bg-success/10 rounded-lg border border-success/20">
+                <p className="text-sm font-medium text-success">
+                  Total a pagar: {getCurrencySymbol()} {totalInCurrency.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+                {selectedCurrency !== 'USD' && (
+                  <p className="text-xs text-muted-foreground">
+                    Equivale a: ${totalPrice} USD
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
