@@ -45,13 +45,19 @@ export const RaffleCard = ({ raffle, soldCount = 0 }: RaffleCardProps) => {
     if (termsContent) {
       setTermsModalOpen(true);
     } else {
-      navigate(`/rifa/${raffle.id}`);
+      // Use setTimeout to prevent potential Chrome mobile rendering issues
+      setTimeout(() => {
+        navigate(`/rifa/${raffle.id}`);
+      }, 10);
     }
   };
 
   const handleAcceptTerms = () => {
     setTermsModalOpen(false);
-    navigate(`/rifa/${raffle.id}`);
+    // Delay navigation to ensure modal closes properly on mobile
+    setTimeout(() => {
+      navigate(`/rifa/${raffle.id}`);
+    }, 100);
   };
 
   return (
