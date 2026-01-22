@@ -180,7 +180,7 @@ ${referenceNumber ? `• Referencia: ${referenceNumber}` : ''}
                 {selectedNumbers.map(num => (
                   <span
                     key={num}
-                    className="px-3 py-1 bg-primary text-primary-foreground font-bold rounded-full text-sm"
+                    className="px-3 py-1 font-bold text-foreground text-sm"
                   >
                     {formatNumber(num)}
                   </span>
