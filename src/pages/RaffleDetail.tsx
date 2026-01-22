@@ -200,6 +200,16 @@ const RaffleDetail = () => {
             <div>
               <p className="text-xs text-muted-foreground">Precio por Número</p>
               <p className="font-bold text-primary text-xl">${raffle.price}</p>
+              {(raffle.cop_rate > 0 || raffle.bs_rate > 0) && (
+                <div className="flex gap-2 text-xs text-muted-foreground">
+                  {raffle.cop_rate > 0 && (
+                    <span>COP {(raffle.price * raffle.cop_rate).toLocaleString('es-CO', { maximumFractionDigits: 0 })}</span>
+                  )}
+                  {raffle.bs_rate > 0 && (
+                    <span>Bs {(raffle.price * raffle.bs_rate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -238,25 +248,32 @@ const RaffleDetail = () => {
             {/* Purchase Button */}
             {selectedNumbers.length > 0 && (
               <div className="fixed bottom-0 left-0 right-0 p-4 bg-card/95 backdrop-blur-lg border-t shadow-lg">
-                <div className="container flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedNumbers.length} número(s) seleccionado(s)
+              <div className="container flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedNumbers.length} número(s) seleccionado(s)
+                  </p>
+                  <p className="text-xl font-bold text-primary">
+                    Total: ${selectedNumbers.length * raffle.price}
+                  </p>
+                  {(raffle.cop_rate > 0 || raffle.bs_rate > 0) && (
+                    <p className="text-xs text-muted-foreground">
+                      {raffle.cop_rate > 0 && `COP ${(selectedNumbers.length * raffle.price * raffle.cop_rate).toLocaleString('es-CO', { maximumFractionDigits: 0 })}`}
+                      {raffle.cop_rate > 0 && raffle.bs_rate > 0 && ' | '}
+                      {raffle.bs_rate > 0 && `Bs ${(selectedNumbers.length * raffle.price * raffle.bs_rate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                     </p>
-                    <p className="text-xl font-bold text-primary">
-                      Total: ${selectedNumbers.length * raffle.price}
-                    </p>
-                  </div>
-                  <Button 
-                    variant="gold" 
-                    size="lg" 
-                    onClick={handlePurchaseClick}
-                    className="gap-2"
-                  >
-                    <ShoppingCart className="w-5 h-5" />
-                    Comprar
-                  </Button>
+                  )}
                 </div>
+                <Button 
+                  variant="gold" 
+                  size="lg" 
+                  onClick={handlePurchaseClick}
+                  className="gap-2"
+                >
+                  <ShoppingCart className="w-5 h-5" />
+                  Comprar
+                </Button>
+              </div>
               </div>
             )}
           </>

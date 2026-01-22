@@ -107,18 +107,34 @@ export const RaffleCard = ({ raffle, soldCount = 0 }: RaffleCardProps) => {
             Una vez tengas tu ticket descárgalo y presiona WhatsApp
           </p>
           
-          <div className="flex items-center justify-between pt-2">
-            <div className="flex items-center gap-1">
-              <DollarSign className="w-5 h-5 text-primary" />
-              <span className="text-2xl font-bold text-primary">{raffle.price}</span>
-              <span className="text-sm text-muted-foreground">/ número</span>
+          <div className="flex flex-col gap-2 pt-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <DollarSign className="w-5 h-5 text-primary" />
+                <span className="text-2xl font-bold text-primary">${raffle.price}</span>
+                <span className="text-sm text-muted-foreground">/ número</span>
+              </div>
+              <Button 
+                variant="gold" 
+                onClick={handleParticipateClick}
+              >
+                Participar
+              </Button>
             </div>
-            <Button 
-              variant="gold" 
-              onClick={handleParticipateClick}
-            >
-              Participar
-            </Button>
+            {(raffle.cop_rate > 0 || raffle.bs_rate > 0) && (
+              <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                {raffle.cop_rate > 0 && (
+                  <span className="bg-muted px-2 py-0.5 rounded">
+                    COP {(raffle.price * raffle.cop_rate).toLocaleString('es-CO', { maximumFractionDigits: 0 })}
+                  </span>
+                )}
+                {raffle.bs_rate > 0 && (
+                  <span className="bg-muted px-2 py-0.5 rounded">
+                    Bs {(raffle.price * raffle.bs_rate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

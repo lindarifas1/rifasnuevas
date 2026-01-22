@@ -320,7 +320,16 @@ export const PurchaseForm = ({
                 <RadioGroupItem value="full" id="full" />
                 <Label htmlFor="full" className="flex-1 cursor-pointer flex items-center gap-2">
                   <CreditCard className="w-4 h-4 text-success" />
-                  <span>Pago Completo</span>
+                  <div className="flex flex-col">
+                    <span>Pago Completo</span>
+                    {(raffle.cop_rate > 0 || raffle.bs_rate > 0) && (
+                      <span className="text-xs text-muted-foreground">
+                        {raffle.cop_rate > 0 && `COP ${(totalPrice * raffle.cop_rate).toLocaleString('es-CO', { maximumFractionDigits: 0 })}`}
+                        {raffle.cop_rate > 0 && raffle.bs_rate > 0 && ' | '}
+                        {raffle.bs_rate > 0 && `Bs ${(totalPrice * raffle.bs_rate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                      </span>
+                    )}
+                  </div>
                   <span className="ml-auto font-bold text-success">${totalPrice}</span>
                 </Label>
               </div>

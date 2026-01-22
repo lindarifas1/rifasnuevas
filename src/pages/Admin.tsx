@@ -118,6 +118,8 @@ const Admin = () => {
     number_count: 100,
     max_numbers_per_client: null as number | null,
     status: 'active' as const,
+    cop_rate: 0,
+    bs_rate: 0,
   });
 
   // Realtime notification hook
@@ -361,6 +363,8 @@ const Admin = () => {
         number_count: 100,
         max_numbers_per_client: null,
         status: 'active',
+        cop_rate: 0,
+        bs_rate: 0,
       });
       fetchRaffles();
     } catch (error) {
@@ -572,6 +576,8 @@ const Admin = () => {
           number_count: editingRaffle.number_count,
           max_numbers_per_client: editingRaffle.max_numbers_per_client,
           status: editingRaffle.status,
+          cop_rate: editingRaffle.cop_rate,
+          bs_rate: editingRaffle.bs_rate,
         })
         .eq('id', editingRaffle.id);
 
@@ -1008,6 +1014,30 @@ const Admin = () => {
                     />
                     <p className="text-xs text-muted-foreground">Dejar vacío para sin límite</p>
                   </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>Tasa COP</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={newRaffle.cop_rate || ''}
+                        onChange={(e) => setNewRaffle({ ...newRaffle, cop_rate: parseFloat(e.target.value) || 0 })}
+                        placeholder="Ej: 4200"
+                      />
+                      <p className="text-xs text-muted-foreground">1 USD = X COP</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Tasa Bs</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={newRaffle.bs_rate || ''}
+                        onChange={(e) => setNewRaffle({ ...newRaffle, bs_rate: parseFloat(e.target.value) || 0 })}
+                        placeholder="Ej: 36.5"
+                      />
+                      <p className="text-xs text-muted-foreground">1 USD = X Bs</p>
+                    </div>
+                  </div>
                   <Button onClick={handleCreateRaffle} className="w-full" variant="gold">
                     Crear Rifa
                   </Button>
@@ -1094,14 +1124,38 @@ const Admin = () => {
                       <Input
                         type="number"
                         min={1}
-                        value={editingRaffle.max_numbers_per_client ?? ''}
-                        onChange={(e) => setEditingRaffle({ 
+                        value={editingRaffle?.max_numbers_per_client ?? ''}
+                        onChange={(e) => editingRaffle && setEditingRaffle({
                           ...editingRaffle, 
                           max_numbers_per_client: e.target.value ? parseInt(e.target.value) : null 
                         })}
                         placeholder="Sin límite"
                       />
                       <p className="text-xs text-muted-foreground">Dejar vacío para sin límite</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label>Tasa COP</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={editingRaffle.cop_rate || ''}
+                          onChange={(e) => setEditingRaffle({ ...editingRaffle, cop_rate: parseFloat(e.target.value) || 0 })}
+                          placeholder="Ej: 4200"
+                        />
+                        <p className="text-xs text-muted-foreground">1 USD = X COP</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Tasa Bs</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={editingRaffle.bs_rate || ''}
+                          onChange={(e) => setEditingRaffle({ ...editingRaffle, bs_rate: parseFloat(e.target.value) || 0 })}
+                          placeholder="Ej: 36.5"
+                        />
+                        <p className="text-xs text-muted-foreground">1 USD = X Bs</p>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label>Estado</Label>
