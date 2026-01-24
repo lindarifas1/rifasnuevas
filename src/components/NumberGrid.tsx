@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Shuffle, X, ZoomIn, ZoomOut, Eye } from 'lucide-react';
+import { Shuffle, X, ZoomIn, ZoomOut, Eye, Plus, Minus } from 'lucide-react';
 
 interface NumberGridProps {
   numberCount: number;
@@ -23,9 +23,9 @@ export const NumberGrid = ({
   onSelectNumber,
   onClearSelection,
 }: NumberGridProps) => {
-  const [randomCount, setRandomCount] = useState<string>('1');
+  const [randomCount, setRandomCount] = useState<number>(1);
   const [zoomLevel, setZoomLevel] = useState<number>(50);
-  const [showOnlyAvailable, setShowOnlyAvailable] = useState<boolean>(false);
+  const [showOnlyAvailable, setShowOnlyAvailable] = useState<boolean>(true);
 
   const occupiedNumbers = useMemo(() => {
     return new Set(
@@ -52,8 +52,9 @@ export const NumberGrid = ({
     return num.toString().padStart(3, '0');
   };
 
-  const handleRandomSelection = () => {
-    const count = parseInt(randomCount) || 0;
+  const availableCount = numberCount - occupiedNumbers.size;
+
+  const handleRandomSelection = (count: number) => {
     if (count <= 0) return;
 
     onClearSelection();
@@ -71,6 +72,14 @@ export const NumberGrid = ({
     setTimeout(() => {
       shuffled.slice(0, actualCount).forEach(num => onSelectNumber(num));
     }, 0);
+  };
+
+  const adjustRandomCount = (delta: number) => {
+    setRandomCount(prev => Math.max(1, Math.min(availableCount, prev + delta)));
+  };
+
+  const setQuickRandomCount = (count: number) => {
+    setRandomCount(Math.min(count, availableCount));
   };
 
   // Calculate grid size based on zoom level (20-100)
@@ -110,26 +119,64 @@ export const NumberGrid = ({
     return allNumbers;
   }, [numberCount, showOnlyAvailable, tickets, selectedNumbers]);
 
-  const availableCount = numberCount - occupiedNumbers.size;
-
   return (
     <div className="space-y-4">
       {/* Random Selection */}
-      <div className="flex gap-2 items-center p-3 bg-card rounded-lg border shadow-sm">
-        <Shuffle className="w-5 h-5 text-secondary" />
-        <span className="text-sm font-medium">Selección al azar:</span>
-        <Input
-          type="number"
-          min={1}
-          max={numberCount - occupiedNumbers.size}
-          value={randomCount}
-          onChange={(e) => setRandomCount(e.target.value)}
-          className="w-20 h-9"
-          placeholder="1"
-        />
-        <Button size="sm" variant="secondary" onClick={handleRandomSelection}>
-          Generar
-        </Button>
+      <div className="p-3 bg-card rounded-lg border shadow-sm space-y-3">
+        <div className="flex items-center gap-2">
+          <Shuffle className="w-5 h-5 text-secondary" />
+          <span className="text-sm font-medium">Selección al azar:</span>
+        </div>
+        
+        {/* Quick buttons */}
+        <div className="flex flex-wrap gap-2">
+          {[2, 5, 10, 20, 50].map(num => (
+            <Button
+              key={num}
+              size="sm"
+              variant={randomCount === num ? "default" : "outline"}
+              onClick={() => setQuickRandomCount(num)}
+              disabled={num > availableCount}
+              className="min-w-10"
+            >
+              {num}
+            </Button>
+          ))}
+        </div>
+
+        {/* Manual input with +/- */}
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => adjustRandomCount(-1)}
+            disabled={randomCount <= 1}
+            className="h-9 w-9 p-0"
+          >
+            <Minus className="w-4 h-4" />
+          </Button>
+          <Input
+            type="number"
+            min={1}
+            max={availableCount}
+            value={randomCount}
+            onChange={(e) => setRandomCount(Math.max(1, Math.min(availableCount, parseInt(e.target.value) || 1)))}
+            className="w-20 h-9 text-center"
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => adjustRandomCount(1)}
+            disabled={randomCount >= availableCount}
+            className="h-9 w-9 p-0"
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => handleRandomSelection(randomCount)} className="ml-2">
+            <Shuffle className="w-4 h-4 mr-1" />
+            Generar
+          </Button>
+        </div>
       </div>
 
       {/* Zoom and Filter Controls */}
