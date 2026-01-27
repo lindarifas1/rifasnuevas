@@ -64,9 +64,9 @@ export const PurchaseTicket = ({
   const getPaymentStatusText = () => {
     switch (paymentType) {
       case 'full':
-        return 'Pago Completo';
+        return 'Pagado';
       case 'partial':
-        return `Abono: $${amountPaid}`;
+        return `Abonado: $${amountPaid}`;
       case 'reserve':
         return 'Reservado (Sin pago)';
       default:

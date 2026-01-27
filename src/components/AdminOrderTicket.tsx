@@ -26,6 +26,10 @@ export const AdminOrderTicket = ({
   const ticketRef = useRef<HTMLDivElement>(null);
 
   const getPaymentStatusText = () => {
+    // Check if it's a partial payment (has paid something but still has debt)
+    if (order.amount_paid > 0 && order.debt > 0) {
+      return 'Abonado 💵';
+    }
     switch (order.payment_status) {
       case 'paid':
         return 'Pagado ✅';
@@ -142,12 +146,14 @@ ${order.reference_number ? `🔢 Referencia: ${order.reference_number}` : ''}
               <div className="bg-muted/50 p-2 rounded">
                 <span className="text-muted-foreground text-xs block">Estado:</span>
                 <span className={`font-semibold text-xs ${
-                  order.payment_status === 'paid' ? 'text-success' :
+                  order.payment_status === 'paid' && order.debt <= 0 ? 'text-success' :
                   order.payment_status === 'rejected' ? 'text-destructive' :
+                  order.amount_paid > 0 && order.debt > 0 ? 'text-secondary' :
                   'text-warning'
                 }`}>
-                  {order.payment_status === 'paid' ? 'Pagado' : 
+                  {order.payment_status === 'paid' && order.debt <= 0 ? 'Pagado' : 
                    order.payment_status === 'rejected' ? 'Rechazado' :
+                   order.amount_paid > 0 && order.debt > 0 ? 'Abonado' :
                    order.payment_status === 'reserved' ? 'Reservado' : 'Pendiente'}
                 </span>
               </div>
