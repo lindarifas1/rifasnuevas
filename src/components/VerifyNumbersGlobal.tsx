@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Search, Ticket, CheckCircle, Clock, XCircle, CreditCard, Wallet, Upload, Loader2 } from 'lucide-react';
+import { Search, Ticket, CheckCircle, Clock, XCircle, CreditCard, Wallet, Upload, Loader2, DollarSign } from 'lucide-react';
 import { Ticket as TicketType, Raffle } from '@/types/database';
 import { PaymentMethodsDisplay } from './PaymentMethodsDisplay';
 
@@ -104,40 +104,59 @@ export const VerifyNumbersGlobal = () => {
     return num.toString().padStart(3, '0');
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return <CheckCircle className="w-4 h-4 text-success" />;
-      case 'pending':
-        return <Clock className="w-4 h-4 text-warning" />;
-      case 'rejected':
-        return <XCircle className="w-4 h-4 text-destructive" />;
-      default:
-        return <Clock className="w-4 h-4 text-muted-foreground" />;
+  const getStatusInfo = (ticket: TicketType & { raffle_name?: string; number_count?: number }) => {
+    const raffle = raffles.find(r => r.id === ticket.raffle_id);
+    const expectedPrice = raffle?.price || 0;
+    const isPartialPayment = ticket.amount_paid > 0 && ticket.amount_paid < expectedPrice;
+    
+    if (ticket.payment_status === 'paid' && !isPartialPayment) {
+      return {
+        icon: <CheckCircle className="w-4 h-4 text-success" />,
+        text: 'Pagado',
+        color: 'text-success'
+      };
     }
+    if (isPartialPayment) {
+      return {
+        icon: <DollarSign className="w-4 h-4 text-secondary" />,
+        text: 'Abonado',
+        color: 'text-secondary'
+      };
+    }
+    if (ticket.payment_status === 'rejected') {
+      return {
+        icon: <XCircle className="w-4 h-4 text-destructive" />,
+        text: 'Rechazado',
+        color: 'text-destructive'
+      };
+    }
+    if (ticket.payment_status === 'reserved') {
+      return {
+        icon: <Clock className="w-4 h-4 text-warning" />,
+        text: 'Reservado',
+        color: 'text-warning'
+      };
+    }
+    return {
+      icon: <Clock className="w-4 h-4 text-warning" />,
+      text: 'Pendiente',
+      color: 'text-warning'
+    };
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return 'Pagado';
-      case 'pending':
-        return 'Pendiente';
-      case 'rejected':
-        return 'Rechazado';
-      case 'reserved':
-        return 'Reservado';
-      default:
-        return status;
-    }
-  };
-
-  // Get pending/reserved tickets that need payment
-  const pendingTickets = tickets.filter(t => t.payment_status === 'pending' || t.payment_status === 'reserved');
+  // Get tickets that need payment (pending, reserved, OR have partial payments with remaining debt)
+  const ticketsNeedingPayment = tickets.filter(t => {
+    if (t.payment_status === 'rejected') return false;
+    const raffle = raffles.find(r => r.id === t.raffle_id);
+    const expectedPrice = raffle?.price || 0;
+    const hasDebt = t.amount_paid < expectedPrice;
+    return t.payment_status === 'pending' || t.payment_status === 'reserved' || 
+           (t.payment_status === 'paid' && hasDebt);
+  });
 
   // Calculate total amount pending
   const getTotalPending = () => {
-    return pendingTickets.reduce((total, ticket) => {
+    return ticketsNeedingPayment.reduce((total, ticket) => {
       const raffle = raffles.find(r => r.id === ticket.raffle_id);
       const ticketPrice = raffle?.price || 0;
       const amountPaid = ticket.amount_paid || 0;
@@ -146,7 +165,7 @@ export const VerifyNumbersGlobal = () => {
   };
 
   const handleOpenPaymentModal = () => {
-    setSelectedTicketsForPayment(pendingTickets);
+    setSelectedTicketsForPayment(ticketsNeedingPayment);
     setPaymentData({
       referenceNumber: '',
       paymentType: 'full',
@@ -327,7 +346,7 @@ export const VerifyNumbersGlobal = () => {
                   Total de números encontrados: <span className="font-semibold text-foreground">{tickets.length}</span>
                 </p>
                 
-                {pendingTickets.length > 0 && totalPending > 0 && (
+                {ticketsNeedingPayment.length > 0 && totalPending > 0 && (
                   <Button onClick={handleOpenPaymentModal} variant="gold" size="sm">
                     <CreditCard className="w-4 h-4 mr-2" />
                     Pagar/Abonar (${totalPending.toFixed(2)} pendiente)
@@ -365,10 +384,17 @@ export const VerifyNumbersGlobal = () => {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            {getStatusIcon(ticket.payment_status)}
-                            <span className="text-sm font-medium">
-                              {getStatusText(ticket.payment_status)}
-                            </span>
+                            {(() => {
+                              const statusInfo = getStatusInfo(ticket);
+                              return (
+                                <>
+                                  {statusInfo.icon}
+                                  <span className={`text-sm font-medium ${statusInfo.color}`}>
+                                    {statusInfo.text}
+                                  </span>
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
                       );
