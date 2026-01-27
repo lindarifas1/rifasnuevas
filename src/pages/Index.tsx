@@ -7,6 +7,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Raffle, Ticket } from '@/types/database';
 import { Loader2, Trophy, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { User, Session } from '@supabase/supabase-js';
+import { toast } from 'sonner';
 
 const Index = () => {
   const [raffles, setRaffles] = useState<Raffle[]>([]);
@@ -17,7 +19,63 @@ const Index = () => {
   const [logoUrl, setLogoUrl] = useState<string>('');
   const [appName, setAppName] = useState('');
   const [adminWhatsapp, setAdminWhatsapp] = useState('');
-  const isAdmin = localStorage.getItem('isAdmin') === 'true';
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Check authentication state
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          setTimeout(() => {
+            checkAdminRole(session.user.id);
+          }, 0);
+        } else {
+          setIsAdmin(false);
+        }
+      }
+    );
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        checkAdminRole(session.user.id);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const checkAdminRole = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .single();
+
+      if (!error && data) {
+        setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+      }
+    } catch (error) {
+      setIsAdmin(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setIsAdmin(false);
+    toast.success('Sesión cerrada');
+  };
 
   useEffect(() => {
     fetchRaffles();
@@ -92,7 +150,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header isAdmin={isAdmin} appName={appName} adminWhatsapp={adminWhatsapp} logoUrl={logoUrl} />
+      <Header isAdmin={isAdmin} onLogout={handleLogout} appName={appName} adminWhatsapp={adminWhatsapp} logoUrl={logoUrl} />
       
       {/* Hero Section - Full image without cropping */}
       {coverImage && (
