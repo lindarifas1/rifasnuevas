@@ -1741,11 +1741,23 @@ const Admin = () => {
                               variant="outline"
                               className="text-success border-success hover:bg-success hover:text-success-foreground text-xs px-2 sm:px-3 shrink-0"
                               onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'paid', order)}
-                              disabled={order.payment_status === 'paid'}
+                              disabled={order.payment_status === 'paid' && order.debt <= 0}
                             >
                               <CheckCircle className="w-3.5 h-3.5 sm:mr-1" />
                               <span className="hidden sm:inline">Aprobar</span>
                             </Button>
+                            {/* Aprobar Abono button - for orders with partial payment that need approval */}
+                            {order.amount_paid > 0 && order.debt > 0 && order.payment_status === 'pending' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-secondary border-secondary hover:bg-secondary hover:text-secondary-foreground text-xs px-2 sm:px-3 shrink-0"
+                                onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'paid', order)}
+                              >
+                                <DollarSign className="w-3.5 h-3.5 sm:mr-1" />
+                                <span className="hidden sm:inline">Aprobar Abono</span>
+                              </Button>
+                            )}
                             <Button
                               size="sm"
                               variant="outline"
