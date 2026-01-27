@@ -1736,53 +1736,25 @@ const Admin = () => {
                           </Button>
                         ) : (
                           <>
-                            {/* Show different buttons based on whether it's a partial payment (abono) */}
-                            {order.amount_paid > 0 && order.debt > 0 ? (
-                              // Has partial payment - show Aprobar/Rechazar Abono
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-success border-success hover:bg-success hover:text-success-foreground text-xs px-2 sm:px-3 shrink-0"
-                                  onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'paid', order)}
-                                >
-                                  <CheckCircle className="w-3.5 h-3.5 sm:mr-1" />
-                                  <span className="hidden sm:inline">Aprobar Abono</span>
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground text-xs px-2 sm:px-3 shrink-0"
-                                  onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'rejected', order)}
-                                >
-                                  <XCircle className="w-3.5 h-3.5 sm:mr-1" />
-                                  <span className="hidden sm:inline">Rechazar Abono</span>
-                                </Button>
-                              </>
-                            ) : (
-                              // No partial payment - show regular Aprobar/Rechazar
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-success border-success hover:bg-success hover:text-success-foreground text-xs px-2 sm:px-3 shrink-0"
-                                  onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'paid', order)}
-                                  disabled={order.payment_status === 'paid'}
-                                >
-                                  <CheckCircle className="w-3.5 h-3.5 sm:mr-1" />
-                                  <span className="hidden sm:inline">Aprobar</span>
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground text-xs px-2 sm:px-3 shrink-0"
-                                  onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'rejected', order)}
-                                >
-                                  <XCircle className="w-3.5 h-3.5 sm:mr-1" />
-                                  <span className="hidden sm:inline">Rechazar</span>
-                                </Button>
-                              </>
-                            )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-success border-success hover:bg-success hover:text-success-foreground text-xs px-2 sm:px-3 shrink-0"
+                              onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'paid', order)}
+                              disabled={order.payment_status === 'paid'}
+                            >
+                              <CheckCircle className="w-3.5 h-3.5 sm:mr-1" />
+                              <span className="hidden sm:inline">Aprobar</span>
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground text-xs px-2 sm:px-3 shrink-0"
+                              onClick={() => handleUpdateOrderStatus(order.ticket_ids, 'rejected', order)}
+                            >
+                              <XCircle className="w-3.5 h-3.5 sm:mr-1" />
+                              <span className="hidden sm:inline">Rechazar</span>
+                            </Button>
                           </>
                         )}
                         <Button
