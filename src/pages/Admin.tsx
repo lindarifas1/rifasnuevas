@@ -92,7 +92,11 @@ const Admin = () => {
   const [logoUrl, setLogoUrl] = useState('');
   const [termsConditions, setTermsConditions] = useState('');
   const [termsDialogOpen, setTermsDialogOpen] = useState(false);
-  const [orderFilter, setOrderFilter] = useState<'all' | 'paid' | 'pending' | 'rejected'>('all');
+  const [orderFilter, setOrderFilter] = useState<'all' | 'paid' | 'pending' | 'rejected' | 'reserved' | 'partial'>('all');
+  const [abonoDialogOpen, setAbonoDialogOpen] = useState(false);
+  const [abonoOrder, setAbonoOrder] = useState<GroupedOrder | null>(null);
+  const [abonoAmount, setAbonoAmount] = useState<number>(0);
+  const [abonoReference, setAbonoReference] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [addClientDialogOpen, setAddClientDialogOpen] = useState(false);
   const [addingClient, setAddingClient] = useState(false);
@@ -479,6 +483,79 @@ const Admin = () => {
     }
   };
 
+  const handleOpenAbonoDialog = (order: GroupedOrder) => {
+    setAbonoOrder(order);
+    setAbonoAmount(0);
+    setAbonoReference('');
+    setAbonoDialogOpen(true);
+  };
+
+  const handleAddAbono = async () => {
+    if (!abonoOrder || abonoAmount <= 0) {
+      toast.error('Ingrese un monto válido');
+      return;
+    }
+
+    if (abonoAmount > abonoOrder.debt) {
+      toast.error('El monto no puede ser mayor a la deuda');
+      return;
+    }
+
+    try {
+      // Distribute the payment across tickets proportionally
+      let remainingPayment = abonoAmount;
+      const updates: { id: string; newAmount: number }[] = [];
+      
+      // Get ticket details for this order
+      const { data: orderTickets, error: fetchError } = await supabase
+        .from('tickets')
+        .select('*')
+        .in('id', abonoOrder.ticket_ids);
+
+      if (fetchError) throw fetchError;
+
+      for (const ticket of orderTickets || []) {
+        if (remainingPayment <= 0) break;
+        
+        const ticketOwed = rafflePrice - (ticket.amount_paid || 0);
+        if (ticketOwed <= 0) continue;
+        
+        const paymentForThisTicket = Math.min(remainingPayment, ticketOwed);
+        remainingPayment -= paymentForThisTicket;
+        
+        updates.push({
+          id: ticket.id,
+          newAmount: (ticket.amount_paid || 0) + paymentForThisTicket,
+        });
+      }
+
+      // Apply updates
+      for (const update of updates) {
+        const updateData: Record<string, unknown> = {
+          amount_paid: update.newAmount,
+          payment_status: 'pending', // Move to pending when payment is made
+        };
+
+        if (abonoReference) {
+          updateData.reference_number = abonoReference;
+        }
+
+        await supabase
+          .from('tickets')
+          .update(updateData)
+          .eq('id', update.id);
+      }
+
+      toast.success(`Abono de $${abonoAmount.toFixed(2)} registrado exitosamente`);
+      setAbonoDialogOpen(false);
+      setAbonoOrder(null);
+      if (selectedRaffle) fetchTickets(selectedRaffle);
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Error al registrar el abono');
+    }
+  };
+
   const handleUpdateSiteCover = async () => {
     try {
       const { data: existing } = await supabase
@@ -745,8 +822,10 @@ const Admin = () => {
   }, [] as GroupedOrder[]);
   
   const paidOrders = groupedOrders.filter(o => o.payment_status === 'paid');
-  const pendingOrders = groupedOrders.filter(o => o.payment_status === 'pending' || o.payment_status === 'reserved');
+  const pendingOrders = groupedOrders.filter(o => o.payment_status === 'pending');
+  const reservedOrders = groupedOrders.filter(o => o.payment_status === 'reserved');
   const rejectedOrders = groupedOrders.filter(o => o.payment_status === 'rejected');
+  const partialPaymentOrders = groupedOrders.filter(o => o.amount_paid > 0 && o.debt > 0);
 
   // Apply filter and search
   const filteredOrders = groupedOrders.filter(order => {
@@ -754,7 +833,9 @@ const Admin = () => {
     const statusMatch = 
       orderFilter === 'all' ? true :
       orderFilter === 'paid' ? order.payment_status === 'paid' :
-      orderFilter === 'pending' ? (order.payment_status === 'pending' || order.payment_status === 'reserved') :
+      orderFilter === 'pending' ? order.payment_status === 'pending' :
+      orderFilter === 'reserved' ? order.payment_status === 'reserved' :
+      orderFilter === 'partial' ? (order.amount_paid > 0 && order.debt > 0) :
       orderFilter === 'rejected' ? order.payment_status === 'rejected' : true;
     
     if (!statusMatch) return false;
@@ -1386,6 +1467,24 @@ const Admin = () => {
                   </Button>
                   <Button
                     size="sm"
+                    variant={orderFilter === 'reserved' ? 'default' : 'outline'}
+                    onClick={() => setOrderFilter('reserved')}
+                    className={`text-xs sm:text-sm ${orderFilter === 'reserved' ? '' : 'text-muted-foreground border-muted-foreground/50 hover:bg-muted hover:text-foreground'}`}
+                  >
+                    <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Apartados</span> ({reservedOrders.length})
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={orderFilter === 'partial' ? 'default' : 'outline'}
+                    onClick={() => setOrderFilter('partial')}
+                    className={`text-xs sm:text-sm ${orderFilter === 'partial' ? '' : 'text-primary border-primary hover:bg-primary hover:text-primary-foreground'}`}
+                  >
+                    <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Con Abonos</span> ({partialPaymentOrders.length})
+                  </Button>
+                  <Button
+                    size="sm"
                     variant={orderFilter === 'rejected' ? 'default' : 'outline'}
                     onClick={() => setOrderFilter('rejected')}
                     className={`text-xs sm:text-sm ${orderFilter === 'rejected' ? '' : 'text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground'}`}
@@ -1676,6 +1775,18 @@ const Admin = () => {
                           raffleName={selectedRaffleData?.title}
                           formatNumber={(num) => formatNumber(num, selectedRaffleData?.number_count || 100)}
                         />
+                        {/* Abonar button - show when there's debt */}
+                        {order.debt > 0 && order.payment_status !== 'rejected' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-primary border-primary hover:bg-primary hover:text-primary-foreground text-xs px-2 sm:px-3 shrink-0"
+                            onClick={() => handleOpenAbonoDialog(order)}
+                          >
+                            <DollarSign className="w-3.5 h-3.5 sm:mr-1" />
+                            <span className="hidden sm:inline">Abonar</span>
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
@@ -1872,6 +1983,100 @@ const Admin = () => {
             formatNumber={(num) => formatNumber(num, selectedRaffleData.number_count)}
           />
         )}
+
+        {/* Abono Dialog */}
+        <Dialog open={abonoDialogOpen} onOpenChange={setAbonoDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-primary" />
+                Registrar Abono
+              </DialogTitle>
+            </DialogHeader>
+            {abonoOrder && (
+              <div className="space-y-4 pt-2">
+                <div className="p-3 bg-muted rounded-lg space-y-2">
+                  <p className="text-sm">
+                    <span className="text-muted-foreground">Cliente:</span>{' '}
+                    <span className="font-medium">{abonoOrder.buyer_name}</span>
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {abonoOrder.numbers.slice(0, 10).map(n => (
+                      <span 
+                        key={n}
+                        className="px-2 py-1 bg-primary/20 text-primary rounded text-xs font-medium"
+                      >
+                        {formatNumber(n, selectedRaffleData?.number_count || 100)}
+                      </span>
+                    ))}
+                    {abonoOrder.numbers.length > 10 && (
+                      <span className="text-xs text-muted-foreground">
+                        +{abonoOrder.numbers.length - 10} más
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 pt-2">
+                    <div className="text-center">
+                      <span className="text-muted-foreground text-xs block">Total</span>
+                      <span className="font-bold text-sm">${abonoOrder.total_amount.toFixed(2)}</span>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-muted-foreground text-xs block">Pagado</span>
+                      <span className="font-bold text-success text-sm">${abonoOrder.amount_paid.toFixed(2)}</span>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-muted-foreground text-xs block">Deuda</span>
+                      <span className="font-bold text-destructive text-sm">${abonoOrder.debt.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="abonoAmount">Monto del Abono *</Label>
+                  <Input
+                    id="abonoAmount"
+                    type="number"
+                    min={0.01}
+                    max={abonoOrder.debt}
+                    step={0.01}
+                    value={abonoAmount || ''}
+                    onChange={(e) => setAbonoAmount(parseFloat(e.target.value) || 0)}
+                    placeholder={`Máximo: $${abonoOrder.debt.toFixed(2)}`}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="abonoReference">Número de Referencia (opcional)</Label>
+                  <Input
+                    id="abonoReference"
+                    value={abonoReference}
+                    onChange={(e) => setAbonoReference(e.target.value)}
+                    placeholder="Ej: 123456789"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setAbonoDialogOpen(false)} 
+                    className="flex-1"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    variant="gold" 
+                    onClick={handleAddAbono} 
+                    className="flex-1"
+                    disabled={abonoAmount <= 0 || abonoAmount > abonoOrder.debt}
+                  >
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    Registrar Abono
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Delete Raffle Confirmation Dialog */}
         <DeleteRaffleDialog
