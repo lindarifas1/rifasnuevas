@@ -1637,18 +1637,22 @@ const Admin = () => {
                             </span>
                           ))}
                         <div className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold flex items-center gap-0.5 sm:gap-1 ml-auto ${
-                          order.payment_status === 'paid'
+                          order.payment_status === 'paid' && order.debt <= 0
                             ? 'bg-success/10 text-success'
                             : order.payment_status === 'rejected'
                             ? 'bg-destructive/10 text-destructive'
+                            : order.amount_paid > 0 && order.debt > 0
+                            ? 'bg-secondary/10 text-secondary'
                             : 'bg-warning/10 text-warning'
                         }`}>
-                          {order.payment_status === 'paid' && <CheckCircle className="w-3 h-3" />}
+                          {order.payment_status === 'paid' && order.debt <= 0 && <CheckCircle className="w-3 h-3" />}
                           {order.payment_status === 'rejected' && <XCircle className="w-3 h-3" />}
-                          {(order.payment_status === 'pending' || order.payment_status === 'reserved') && <Clock className="w-3 h-3" />}
+                          {order.amount_paid > 0 && order.debt > 0 && <DollarSign className="w-3 h-3" />}
+                          {order.amount_paid === 0 && order.payment_status !== 'rejected' && order.payment_status !== 'paid' && <Clock className="w-3 h-3" />}
                           <span className="hidden sm:inline">
-                            {order.payment_status === 'paid' ? 'Pagado' : 
+                            {order.payment_status === 'paid' && order.debt <= 0 ? 'Pagado' : 
                              order.payment_status === 'rejected' ? 'Rechazado' :
+                             order.amount_paid > 0 && order.debt > 0 ? 'Abonado' :
                              order.payment_status === 'reserved' ? 'Reservado' : 'Pendiente'}
                           </span>
                         </div>

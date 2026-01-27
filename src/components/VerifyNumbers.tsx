@@ -4,15 +4,16 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Search, Ticket, CheckCircle, Clock, XCircle } from 'lucide-react';
-import { Ticket as TicketType } from '@/types/database';
+import { Search, Ticket, CheckCircle, Clock, XCircle, DollarSign } from 'lucide-react';
+import { Ticket as TicketType, Raffle } from '@/types/database';
 
 interface VerifyNumbersProps {
   raffleId: string;
   numberCount: number;
+  raffles?: Raffle[];
 }
 
-export const VerifyNumbers = ({ raffleId, numberCount }: VerifyNumbersProps) => {
+export const VerifyNumbers = ({ raffleId, numberCount, raffles }: VerifyNumbersProps) => {
   const [cedula, setCedula] = useState('');
   const [loading, setLoading] = useState(false);
   const [tickets, setTickets] = useState<TicketType[]>([]);
@@ -56,32 +57,41 @@ export const VerifyNumbers = ({ raffleId, numberCount }: VerifyNumbersProps) => 
     return num.toString().padStart(3, '0');
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return <CheckCircle className="w-4 h-4 text-success" />;
-      case 'pending':
-        return <Clock className="w-4 h-4 text-warning" />;
-      case 'rejected':
-        return <XCircle className="w-4 h-4 text-destructive" />;
-      default:
-        return <Clock className="w-4 h-4 text-muted-foreground" />;
+  const getStatusIcon = (ticket: TicketType) => {
+    const raffleData = raffles?.find(r => r.id === ticket.raffle_id);
+    const expectedPrice = raffleData?.price || 0;
+    const isPartialPayment = ticket.amount_paid > 0 && ticket.amount_paid < expectedPrice;
+    
+    if (ticket.payment_status === 'paid' && !isPartialPayment) {
+      return <CheckCircle className="w-4 h-4 text-success" />;
     }
+    if (isPartialPayment) {
+      return <DollarSign className="w-4 h-4 text-secondary" />;
+    }
+    if (ticket.payment_status === 'rejected') {
+      return <XCircle className="w-4 h-4 text-destructive" />;
+    }
+    return <Clock className="w-4 h-4 text-warning" />;
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return 'Pagado';
-      case 'pending':
-        return 'Pendiente';
-      case 'rejected':
-        return 'Rechazado';
-      case 'reserved':
-        return 'Reservado';
-      default:
-        return status;
+  const getStatusText = (ticket: TicketType) => {
+    const raffleData = raffles?.find(r => r.id === ticket.raffle_id);
+    const expectedPrice = raffleData?.price || 0;
+    const isPartialPayment = ticket.amount_paid > 0 && ticket.amount_paid < expectedPrice;
+    
+    if (ticket.payment_status === 'paid' && !isPartialPayment) {
+      return 'Pagado';
     }
+    if (isPartialPayment) {
+      return 'Abonado';
+    }
+    if (ticket.payment_status === 'rejected') {
+      return 'Rechazado';
+    }
+    if (ticket.payment_status === 'reserved') {
+      return 'Reservado';
+    }
+    return 'Pendiente';
   };
 
   return (
@@ -125,9 +135,9 @@ export const VerifyNumbers = ({ raffleId, numberCount }: VerifyNumbersProps) => 
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    {getStatusIcon(ticket.payment_status)}
+                    {getStatusIcon(ticket)}
                     <span className="text-sm font-medium">
-                      {getStatusText(ticket.payment_status)}
+                      {getStatusText(ticket)}
                     </span>
                   </div>
                 </div>
