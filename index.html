@@ -7,6 +7,7 @@
     <!-- GitHub Pages SPA redirect handler -->
     <script>
       (function(){
+        var seg = location.pathname.replace(/\/rifasnuevas\/?/, '/');
         var redirect = sessionStorage.redirect;
         delete sessionStorage.redirect;
         if (redirect && redirect !== location.href) {
