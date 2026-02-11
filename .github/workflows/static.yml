@@ -31,12 +31,12 @@ jobs:
         run: npm install
 
       - name: Build
-        run: npm build # Aquí es donde Vite crea la carpeta 'dist'
+        run: npm run build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist' # IMPORTANTE: Subimos 'dist', no todo el repo
+          path: './dist'
 
   deploy:
     environment:
