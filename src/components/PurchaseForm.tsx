@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { uploadToTelegram } from '@/lib/telegram';
 import { Loader2, Upload, CreditCard, Wallet, MessageCircle, AlertTriangle, DollarSign } from 'lucide-react';
 import { Raffle } from '@/types/database';
 import { PurchaseTicket } from './PurchaseTicket';
@@ -160,24 +161,13 @@ export const PurchaseForm = forwardRef<HTMLDivElement, PurchaseFormProps>(({
     try {
       let paymentProofUrl = null;
 
-      // Upload payment proof if provided
+      // Upload payment proof to Telegram
       if (paymentProof) {
-        const fileExt = paymentProof.name.split('.').pop();
-        const fileName = `${Date.now()}-${formData.cedula}.${fileExt}`;
-        
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('payment-proofs')
-          .upload(fileName, paymentProof);
-
-        if (uploadError) {
-          console.error('Upload error:', uploadError);
-          toast.error('No se pudo subir el comprobante. Revisa la configuración de Storage e intenta de nuevo.');
-          throw uploadError;
-        } else {
-          const { data: urlData } = supabase.storage
-            .from('payment-proofs')
-            .getPublicUrl(uploadData.path);
-          paymentProofUrl = urlData.publicUrl;
+        const caption = `Comprobante - ${formData.name} (${formData.cedula}) - Rifa: ${raffle.title}`;
+        paymentProofUrl = await uploadToTelegram(paymentProof, caption);
+        if (!paymentProofUrl) {
+          toast.error('No se pudo subir el comprobante. Intenta de nuevo.');
+          throw new Error('Telegram upload failed');
         }
       }
 
