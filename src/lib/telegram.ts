@@ -5,26 +5,30 @@ export async function uploadToTelegram(file: File, caption?: string): Promise<st
   try {
     const formData = new FormData();
     formData.append('chat_id', CHAT_ID);
-    formData.append('photo', file);
+    formData.append('document', file);
     if (caption) {
       formData.append('caption', caption);
     }
 
-    const sendRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+    const sendRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, {
       method: 'POST',
       body: formData,
     });
 
     const sendData = await sendRes.json();
+    console.log('Telegram sendDocument response:', JSON.stringify(sendData));
+    
     if (!sendData.ok) {
-      console.error('Telegram sendPhoto error:', sendData);
+      console.error('Telegram sendDocument error:', sendData);
       return null;
     }
 
-    // Get the largest photo size
-    const photos = sendData.result.photo;
-    const largestPhoto = photos[photos.length - 1];
-    const fileId = largestPhoto.file_id;
+    // Get file_id from document
+    const fileId = sendData.result.document?.file_id;
+    if (!fileId) {
+      console.error('No file_id in Telegram response');
+      return null;
+    }
 
     // Get file path
     const fileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`);
