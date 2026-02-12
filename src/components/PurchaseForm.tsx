@@ -161,13 +161,13 @@ export const PurchaseForm = forwardRef<HTMLDivElement, PurchaseFormProps>(({
     try {
       let paymentProofUrl = null;
 
-      // Upload payment proof to Telegram
+      // Upload payment proof to Telegram (non-blocking: ticket is created even if upload fails)
       if (paymentProof) {
-        const caption = `Comprobante - ${formData.name} (${formData.cedula}) - Rifa: ${raffle.title}`;
+        const caption = `Comprobante - ${formData.name} (${formData.cedula}) - Rifa: ${raffle.title} - Números: ${selectedNumbers.map(n => formatNumber(n)).join(', ')}`;
         paymentProofUrl = await uploadToTelegram(paymentProof, caption);
         if (!paymentProofUrl) {
-          toast.error('No se pudo subir el comprobante. Intenta de nuevo.');
-          throw new Error('Telegram upload failed');
+          console.warn('Telegram upload failed, continuing without proof URL');
+          toast.warning('No se pudo subir el comprobante a Telegram, pero tu compra se procesará. Envía el comprobante por WhatsApp.');
         }
       }
 
