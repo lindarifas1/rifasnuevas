@@ -45,6 +45,7 @@ import {
   UsersRound,
 } from 'lucide-react';
 import { ClientsSection } from '@/components/ClientsSection';
+import { resolveProofUrl } from '@/lib/telegram';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { User, Session } from '@supabase/supabase-js';
 
@@ -1774,10 +1775,12 @@ const Admin = () => {
                           variant="outline"
                           className="text-xs px-2 sm:px-3 shrink-0"
                           disabled={!order.payment_proof_url}
-                          onClick={() => {
+                          onClick={async () => {
                             if (!order.payment_proof_url) return;
-                            setSelectedProofUrl(order.payment_proof_url);
                             setProofDialogOpen(true);
+                            setSelectedProofUrl(null); // show loading
+                            const url = await resolveProofUrl(order.payment_proof_url);
+                            setSelectedProofUrl(url);
                           }}
                         >
                           <Eye className="w-3.5 h-3.5 sm:mr-1" />
@@ -1838,6 +1841,11 @@ const Admin = () => {
                   alt="Comprobante de pago"
                   className="w-full max-h-[70vh] object-contain rounded-lg"
                 />
+              ) : proofDialogOpen ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-muted-foreground">Cargando comprobante...</span>
+                </div>
               ) : (
                 <p className="text-center text-muted-foreground">No hay comprobante disponible</p>
               )}

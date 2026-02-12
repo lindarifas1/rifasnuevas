@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { uploadToTelegram } from '@/lib/telegram';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -254,22 +255,13 @@ export const VerifyNumbersGlobal = () => {
     try {
       let paymentProofUrl = null;
 
-      // Upload payment proof if provided
+      // Upload payment proof to Telegram (non-blocking)
       if (paymentProof) {
-        const fileExt = paymentProof.name.split('.').pop();
-        const fileName = `${Date.now()}-${cedula}.${fileExt}`;
-        
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('payment-proofs')
-          .upload(fileName, paymentProof);
-
-        if (uploadError) {
-          console.error('Upload error:', uploadError);
-        } else {
-          const { data: urlData } = supabase.storage
-            .from('payment-proofs')
-            .getPublicUrl(uploadData.path);
-          paymentProofUrl = urlData.publicUrl;
+        const caption = `Comprobante de abono - ${cedula}`;
+        paymentProofUrl = await uploadToTelegram(paymentProof, caption);
+        if (!paymentProofUrl) {
+          console.warn('Telegram upload failed, continuing without proof URL');
+          toast.warning('No se pudo subir el comprobante, pero tu pago se registrará.');
         }
       }
 
